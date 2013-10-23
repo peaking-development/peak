@@ -11,6 +11,7 @@ module.exports = function(_)
 		debug = false
 	}
 	
+	--[===[Syscalls]===]
 	function kernel.registerSyscall(name, handler)
 		if type(kernal.syscalls[name]) == 'function' then
 			error('Attempt to reregister syscall: ' .. name, 2)
@@ -27,6 +28,7 @@ module.exports = function(_)
 		end
 	end
 
+	--[===[Interupts]===]
 	function kernel.registerInterupt(ev, handler)
 		local interupts = kernel.interupts[ev]
 		if interupts == nil then
@@ -57,6 +59,7 @@ module.exports = function(_)
 		end
 	end
 
+	--[===[Modules]===]
 	function kernel.loadModule(module)
 		if type(kernel.modules[module.name]) ~= 'table' then
 			kernel.modules[module.name] = module
@@ -73,7 +76,7 @@ module.exports = function(_)
 		kernel.modules[module] = nil
 	end
 
-	-- Device manager
+	--[===[Device Manager]===]
 	kernel.devices = deviceManager({}, kernel.interupt)
 
 	kernel.registerInterupt('peripheral', kernel.devices.newDeviceHandler)
