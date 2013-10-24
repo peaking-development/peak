@@ -23,8 +23,8 @@ local function peak(_)
 			kernel.interupts[ev] = {interupts, handler}
 			return 2
 		else
-			print('what is going on here? ', type(interupts))
-			print('someone messed with the interupt table')
+			_.print('what is going on here? ', type(interupts))
+			_.print('someone messed with the interupt table')
 		end
 	end
 
@@ -37,7 +37,7 @@ local function peak(_)
 				interupts[i](ev, ...)
 			end
 		elseif kernel.debug then
-			print('Unhandled interupt: ' .. ev)
+			_.print('Unhandled interupt: ' .. ev)
 		end
 	end
 
@@ -47,7 +47,7 @@ local function peak(_)
 			kernel.modules[module.name] = module
 			module.load(kernel)
 		else
-			error('Module already loaded: ' .. module.name, 2)
+			_.error('Module already loaded: ' .. module.name, 2)
 		end
 	end
 
