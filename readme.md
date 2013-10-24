@@ -6,4 +6,6 @@
 - Interupts ✓
 - FS ✗
 - Device Manager WIP
-- Thread manager ✗
+- Thread System WIP
+- Process System ✗
+- Userspace ✓
