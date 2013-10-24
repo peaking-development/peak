@@ -6,27 +6,9 @@ local threads = require('./threads')
 local function peak(_)
 	local kernel = {
 		interupts = {},
-		syscalls = {},
 		modules = {},
 		debug = false
 	}
-	
-	--[===[Syscalls]===]
-	function kernel.registerSyscall(name, handler)
-		if type(kernal.syscalls[name]) == 'function' then
-			error('Attempt to reregister syscall: ' .. name, 2)
-		else
-			kernel.syscalls[name] = handler
-		end
-	end
-
-	function kernel.syscall(name, ...)
-		if type(kernel.syscalls[name]) == 'function' then
-			return kernel.syscalls[name](...)
-		else
-			error('Attempt to call non-existent syscall: ' .. name, 2)
-		end
-	end
 
 	--[===[Interupts]===]
 	function kernel.registerInterupt(ev, handler)
