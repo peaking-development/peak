@@ -1,7 +1,7 @@
 --[=====[Peak Kernel by CoderPuppy]=====]
 
 local deviceManager = require('./devices')
-local thread = require('./thread')
+local threads = require('./threads')
 
 module.exports = function(_)
 	local kernel = {
