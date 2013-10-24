@@ -1,3 +1,6 @@
+--[=====[Rack by CoderPuppy]=====]
+-- Device Manager
+
 module.exports = function(opts, queue)
 	local devices = {
 		table = {}
