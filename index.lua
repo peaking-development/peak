@@ -3,7 +3,7 @@
 local deviceManager = require('./devices')
 local threads = require('./threads')
 
-module.exports = function(_)
+local function peak(_)
 	local kernel = {
 		interupts = {},
 		syscalls = {},
@@ -84,3 +84,9 @@ module.exports = function(_)
 
 	return kernel
 end
+
+module.exports = setmetatable({
+	threads = threads
+}, {
+	__call = function(t, ...) return peak(...) end
+})
