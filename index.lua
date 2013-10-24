@@ -39,6 +39,8 @@ local function peak(_)
 		elseif kernel.debug then
 			_.print('Unhandled interupt: ' .. ev)
 		end
+
+		kernel.scheduler.interupt(ev, ...)
 	end
 
 	--[===[Modules]===]
@@ -63,6 +65,9 @@ local function peak(_)
 
 	kernel.registerInterupt('peripheral', kernel.devices.newDeviceHandler)
 	kernel.registerInterupt('peripheral_detach', kernel.devices.oldDeviceHandler)
+
+	--[===[Scheduler]===]
+	kernel.scheduler = threads.scheduler()
 
 	return kernel
 end
