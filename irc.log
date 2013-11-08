@@ -1,0 +1,74 @@
+threads.clone
+how should it create a new process?
+oh, i know!
+threads have a thingy
+and the thingy creates processes
+it works!
+CLONE_NEWPID
+it's the solution to all problems!
+it'll be interesting to implement though...
+root process?
+i sort of need to
+but NO!
+I WILL NOT HAVE A ROOT PROCESS
+hrmm
+that makes things difficult
+well i think it's done: threads.newBase
+surprisingly few changes
+now threads and processes are very specific to each other :(
+unregistering queues isn't important, right?
+so custom pid namespace
+that just has the kernel and can see children
+I could cheat here and just make namespace() expose the table of pids
+NOPE!
+hmm
+reusing pids...
+I should probably implement what i just wrote in a comment
+ooh
+that actually worked!
+ability to clone any process?
+maybe
+sound's good!
+so code!
+having a different process namespace for a thread doesn't make sense
+right?
+i've completed threads.clone!
+fixy fixy bug
+nothing wrong with having the kernel be a process, thread and process namespace too
+right? :D
+yay! threads.clone::opts.env is complete
+i think
+this is ready for release: 90% done, 10% tested
+should interupts even exist?
+doesn't seem very useful
+oh and it breaks stuff
+so yeah!
+hmm
+thats means i need to have interupts
+so yeah!
+interupts are hardware events
+so there!
+it would help to always have at least one thread per process
+unfortunatly that is not the case
+ok then manual it is
+command line info is only needed in one thread, right?
+yay! multiple programs per process!
+one per thread!
+threads.new needs to emit a newThread event
+but in threads.clone it should be emitted later
+so annoyingness
+well threads.new shouldn't be used anyway
+so bad!
+where was i thinking processes with no main thread would be created
+TELL ME NOW!
+how should exec work?
+i know now
+it replaces the coroutine
+and queues args
+it queues NOW
+TODO: Permissions
+now permissions and users
+standardification
+is that even a word?
+threads are now scheduled!
+i think ;)

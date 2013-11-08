@@ -1,22 +1,42 @@
 --[=====[Rack by CoderPuppy]=====]
 -- Device Manager
 
-module.exports = function(opts, queue)
+local utils = require('./utils')
+
+function exports.new(id, dtype, api)
+	local device = {
+		id = id,
+		api = api,
+		type = dtype
+	}
+
+	return device
+end
+
+function exports.wrap(id)
+	return exports.new(id, peripheral.getType(id), peripheral.wrap(id))
+end
+
+function exports.isDevice(dev)
+	return type(dev)      == 'table'
+	   and type(dev.id)   == 'string'
+	   and type(dev.api)  == 'table'
+	   and type(dev.type) == 'string'
+end
+
+setmetatable(exports, { __call = function(t, opts, queue)
 	local devices = {
 		table = {}
 	}
 
-	function devices.register(id, dtype, dev)
+	function devices.register(dev)
 		if type(dev) ~= 'table' then error('Attempt to register non-table device: ' .. id, 2) end
 
-		if type(devices.table[id]) ~= 'table' then
-			devices.table[id] = {
-				type = dtype,
-				api = dev
-			}
-			queue('devices:register', id, dtype, dev)
+		if type(devices.table[dev.id]) ~= 'table' then
+			devices.table[dev.id] = dev
+			queue('devices:register', dev)
 		else
-			error('Attempt to reregister a device: ' .. id, 2)
+			error('Attempt to reregister a device: ' .. dev.id, 2)
 		end
 	end
 
@@ -31,14 +51,9 @@ module.exports = function(opts, queue)
 		for i = 1, #args do
 			local arg = args[i]
 
-			if arg:sub(1, 5) == 'type:' then
-				if dev.type ~= arg:sub(6) then return false end
-			elseif arg:sub(1, 5) == 'type|' then
-				if dev.type == arg:sub(6) then return false end
-			-- TODO: Add more filters here
-			end
+			if not utils.filterProp(arg, 'id', dev.id) then return false end
+			if not utils.filterProp(arg, 'type', dev.type) then return false end
 		end
-
 
 		return true
 	end
@@ -49,9 +64,6 @@ module.exports = function(opts, queue)
 				return dev
 			end
 		end
-
-		-- How should this be handled
-		error('No device of type: ' .. dtype .. ' registered with device manager', 2)
 	end
 
 	function devices.all(...)
@@ -66,9 +78,17 @@ module.exports = function(opts, queue)
 		return all
 	end
 
+	function devices.detect()
+		local names = peripheral.getNames()
+
+		for i = 1, #names do
+			devices.register(exports.wrap(names[i]))
+		end
+	end
+
 	function devices.newDeviceHandler(ev, side)
 		if ev == 'peripheral' then
-			devices.register(side, peripheral.wrap(side))
+			devices.register(exports.wrap(side))
 		end
 	end
 
@@ -84,4 +104,4 @@ module.exports = function(opts, queue)
 	end
 
 	return devices
-end
+end })

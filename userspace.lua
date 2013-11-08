@@ -2,7 +2,7 @@
 -- TODO: More sandboxing
 -- TODO: More libs
 
-module.exports = setfenv(function(A)
+local kernel = setfenv(function(A)
 	local _ = A
 	A = nil
 
@@ -13,7 +13,7 @@ module.exports = setfenv(function(A)
 		}, {
 			__index = function(t, k)
 				if k == 'fs' then return _.fs
-				elseif k == 'proc' then return _.proc
+				elseif k == 'namespace' then return _.namespace
 				else return nil end
 			end,
 			__newindex = function(t, k, v)
@@ -28,5 +28,9 @@ module.exports = setfenv(function(A)
 end, {
 	coroutine = coroutine,
 	string = string,
-	table = table
+	table = table,
+	setmetatable = setmetatable,
+	error = error
 })
+
+exports.kernel = kernel
