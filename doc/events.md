@@ -19,6 +19,7 @@ also global events are bad but thread-global events are GOOD!
 So register a table with a queue method and it'll work! SOON!
 -------------------------------------------------------------
 So this is still a problem because permissions work based on the current thread
+I have to implment it in the eventemitter
 
 __Events for Drivers:__
 
