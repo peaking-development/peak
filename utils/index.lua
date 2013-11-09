@@ -31,6 +31,13 @@ function exports.eventEmitter(t, debug)
 	function t.on(ev, handler)
 		if type(handler) ~= 'function' then error('Attempt to register non-function as interupt handler', 2) end
 
+		-- TODO: Make this optional
+		handler = {threads.current(), handler}
+
+		t.emit('newListener', ev, function(...)
+			return callHandler(handler, ...)
+		end)
+
 		local handlers = events[ev]
 		if handlers == nil then
 			events[ev] = {handler}
@@ -105,4 +112,74 @@ function exports.filterProp(arg, name, val)
 	end end
 
 	return true
+end
+
+function exports.defer()
+	local deferred = exports.eventEmitter({
+		done = false
+	})
+
+	function deferred.resolve(...)
+		deferred.done   = true
+		deferred.ok     = true
+		deferred.result = {...}
+
+		deferred.emit('resolved', ...)
+	end
+
+	function deferred.reject(...)
+		deferred.done   = true
+		deferred.ok     = false
+		deferred.result = {...}
+
+		deferred.emit('rejected', ...)
+	end
+
+	function deferred.promise()
+		local promise = exports.eventEmitter({})
+
+		setmetatable(promise, {
+			__index = function(t, k)
+				if k     == 'done'   then return deferred.done
+				elseif k == 'ok'     then return deferred.ok
+				elseif k == 'result' then return deferred.result
+				else
+					return rawget(t, k)
+				end
+			end
+		})
+
+		deferred.on('resolved', function(...) promise.emit('resolved', ...) end)
+		deferred.on('rejected', function(...) promise.emit('rejected', ...) end)
+
+		promise.on('newListener', function(event, listener)
+			if promise.done then
+				if event == 'resolved' and promise.ok then
+					listener(unpack(promise.result))
+				elseif event == 'rejected' and not promise.ok then
+					listener(unpack(promise.result))
+				end
+			end
+		end)
+
+		return promise
+	end
+
+	deferred.on('newListener', function(event, listener)
+		if deferred.done then
+			if event == 'resolved' and deferred.ok then
+				listener(unpack(deferred.result))
+			elseif event == 'rejected' and not deferred.ok then
+				listener(unpack(deferred.result))
+			end
+		end
+	end)
+
+	return deferred
+end
+
+function exports.isPromise(p)
+	return type(p)      == 'table' and
+	       type(p.on)   == 'function' and
+	       type(p.done) == 'boolean'
 end
