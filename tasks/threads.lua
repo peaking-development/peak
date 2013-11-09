@@ -220,6 +220,14 @@ end
 
 function exports.current() return current end
 
+function exports.runInThread(thread, fn, ...)
+	local prev = current
+	current = thread
+	local rtn = fn(...)
+	current = prev
+	return rtn
+end
+
 function exports.isThread(thread)
 	return type(thread) == 'table' and thread.type == exports.type
 end

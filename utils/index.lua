@@ -4,22 +4,40 @@ function exports.eventEmitter(t, debug)
 	local events = {}
 	local queues = {}
 	local lastEvent
+	
+	local function callHandler(handler, ...)
+		threads.runInThread(unpack(handler), ...)
+	end
 
 	function t.emit(ev, ...)
 		if exports.tableEqual(lastEvent, { ev, ... }) then return t end
-		
+
 		lastEvent = { ev, ... }
 
-		if type(events[ev]) == 'function' then
-			events[ev](...)
-		elseif type(events[ev]) == 'table' then
-			local handlers = events[ev]
-			for i = 1, #handlers do
-				handlers[i](...)
+		-- TODO: Make this optional
+		if type(events[ev]) == 'table' then
+			if #events[ev] == 2 and type(event[ev][2]) == 'function' then
+				callHandler(events[ev], ...)
+			else
+				local handlers = events[ev]
+				for i = 1, #handlers do
+					callHandler(handlers[i], ...)
+				end
 			end
 		elseif debug then
 			print('Unhandled event: ' .. ev)
 		end
+
+		-- if type(events[ev]) == 'function' then
+		-- 	callHandler(events[ev], ...)
+		-- elseif type(events[ev]) == 'table' then
+		-- 	local handlers = events[ev]
+		-- 	for i = 1, #handlers do
+		-- 		callHandler(handlers[i], ...)
+		-- 	end
+		-- elseif debug then
+		-- 	print('Unhandled event: ' .. ev)
+		-- end
 
 		for i = 1, #queues do
 			queues[i](ev, ...)
@@ -45,9 +63,6 @@ function exports.eventEmitter(t, debug)
 		elseif type(handlers) == 'table' then
 			handlers[#handlers + 1] = handler
 			return #handlers
-		elseif type(handlers) == 'function' then
-			events[ev] = {handlers, handler}
-			return 2
 		else
 			print('what is going on here? ', type(handlers))
 			print('someone messed with the events table')
