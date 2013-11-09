@@ -1,4 +1,4 @@
-local threads = require('./threads')
+local threads = require('peak-tasks/threads')
 
 function exports.eventEmitter(t, debug)
 	local events = {}

@@ -4,8 +4,8 @@
 -- Mainly the processes have their own threads
 
 local processes = require('./processes')
-local utils     = require('./utils')
-local users     = require('./users')
+local utils     = require('peak-utils')
+local users     = require('peak-users')
 
 local current
 

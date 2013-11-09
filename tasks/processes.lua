@@ -1,7 +1,7 @@
 --[=====[Peak Processes by CoderPuppy]=====]
 
 local threads = require('./threads')
-local utils   = require('./utils')
+local utils   = require('peak-utils')
 
 --[[process = {
 	id             = process id,

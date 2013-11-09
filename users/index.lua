@@ -1,6 +1,6 @@
 --[=====[Peak Users by CoderPuppy]=====]
 
-local processes = require('./processes')
+local processes = require('peak-tasks/processes')
 
 --[[user = {
 	-- id: number -- maybe?

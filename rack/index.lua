@@ -1,7 +1,7 @@
 --[=====[Rack by CoderPuppy]=====]
 -- Device Manager
 
-local utils = require('./utils')
+local utils = require('peak-utils')
 
 function exports.new(id, dtype, api)
 	local device = {
