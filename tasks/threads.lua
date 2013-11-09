@@ -86,18 +86,32 @@ end
 function exports.new(process, fn, ...)
 	local thread = exports.newBase(process)
 
+	local function runCoroutine(...)
+		local prev = current
+		current = thread
+		local rtn = coroutine.resume(thread.coroutine, ...)
+		current = prev
+
+		if utils.isPromise(rtn) then
+			thread.promise = rtn
+		end
+	end
+
 	-- Maybe this should return how many iterations it got through
 	function thread.run(iters)
 		if type(iters) ~= 'number' then iters = 1 end
 
 		if type(thread.coroutine) ~= 'thread' then return false end
 
+		if thread.promise.done then
+			runCoroutine(unpack(thread.promise.result))
+			thread.promise = nil
+		end
+
 		for i = 1, iters do
 			if #thread.eventQueue == 0 then return false end
-			local prev = current
-			current = thread
-			coroutine.resume(thread.coroutine, unpack(table.remove(thread.eventQueue)))
-			current = prev
+			if thread.promise ~= nil then break end
+			runCoroutine(unpack(table.remove(thread.eventQueue)))
 		end
 	end
 
