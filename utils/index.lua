@@ -140,19 +140,27 @@ function exports.defer()
 	})
 
 	function deferred.resolve(...)
-		deferred.done   = true
-		deferred.ok     = true
-		deferred.result = {...}
+		if not deferred.done then
+			deferred.done   = true
+			deferred.ok     = true
+			deferred.result = {...}
 
-		deferred.emit('resolved', ...)
+			deferred.emit('resolved', ...)
+		end
+
+		return deferred
 	end
 
 	function deferred.reject(...)
-		deferred.done   = true
-		deferred.ok     = false
-		deferred.result = {...}
+		if not deferred.done then
+			deferred.done   = true
+			deferred.ok     = false
+			deferred.result = {...}
 
-		deferred.emit('rejected', ...)
+			deferred.emit('rejected', ...)
+		end
+
+		return deferred
 	end
 
 	function deferred.promise()
