@@ -6,7 +6,14 @@ function exports.eventEmitter(t, debug)
 	local lastEvent
 	
 	local function callHandler(handler, ...)
-		threads.runInThread(unpack(handler), ...)
+		if type(handler[2]) ~= 'function' then error('Bad handler', 2) end
+		if handler[1] == nil then
+			handler[2](...)
+		elseif threads.isThread(handler[1]) then
+			threads.runInThread(unpack(handler), ...)
+		else
+			error('Bad handler', 2)
+		end
 	end
 
 	function t.emit(ev, ...)
