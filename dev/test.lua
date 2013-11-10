@@ -6,26 +6,48 @@ local utils = require('peak-utils')
 local peak = require('peak')
 local kernel = peak(_G)
 
-local test = peak.threads.clone(kernel, {
-	namespace = 'new',
-	process = 'new',
-	files = 'new',
-	env = 'clone',
-	fs = 'clone'
-}, function()
-	print('in thread')
+function threadsTest1()
+	local test = peak.threads.clone(kernel, {
+		namespace = 'new',
+		process = 'new',
+		files = 'new',
+		env = 'clone',
+		fs = 'clone'
+	}, function()
+		print('in thread')
 
-	print(utils.filterProp('type:test', 'type', 'test'))
+		print(utils.filterProp('type:test', 'type', 'test'))
 
-	kernel.alive = false
+		kernel.alive = false
 
-	while true do
-		local ev = {coroutine.yield()}
-		-- print(ev[1])
-	end
-end)
+		while true do
+			local ev = {coroutine.yield()}
+			-- print(ev[1])
+		end
+	end)
 
-test.paused = false
+	test.paused = false
+end
+
+function promisesTest1()
+	local deferred = utils.defer()
+
+	deferred(function(res)
+		print('Result: ' .. res)
+	end)
+
+	-- Won't work because then is a keyword in Lua
+	-- deferred.then(function(res)
+	-- 	print('Result: ' .. res)
+	-- end)
+
+	deferred.on('resolved', function(res)
+		print('Result: ' .. res)
+	end)
+
+	deferred.resolve('stuff')
+	deferred.resolve('this should not be printed')
+end
 
 local timeout = 0.5
 local timeoutTimer = os.startTimer(timeout)
