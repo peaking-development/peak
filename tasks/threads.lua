@@ -235,6 +235,7 @@ end
 function exports.current() return current end
 
 function exports.runInThread(thread, fn, ...)
+	if type(fn) ~= 'function' then error('Not a function', 2) end
 	local prev = current
 	current = thread
 	local rtn = fn(...)
