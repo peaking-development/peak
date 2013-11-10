@@ -235,3 +235,17 @@ function exports.isPromise(p)
 	       type(p.on)   == 'function' and
 	       type(p.done) == 'boolean'
 end
+
+function exports.reerror(err, level)
+	error(err:gsub('^pcall: ', ''), level == 0 and 0 or level + 1)
+end
+
+function exports.reerrorCall(level, fn, ...)
+	local ok, rtn = pcall(fn, ...)
+
+	if not ok then
+		reerror(rtn, level == 0 and 0 or level + 1)
+	end
+
+	return rtn
+end
