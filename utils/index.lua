@@ -190,6 +190,18 @@ function exports.defer()
 			end
 		end)
 
+		setmetatable(promise, {
+			__call = function(t, callback, errback)
+				if type(callback) == 'function' then
+					promise.on('resolved', callback)
+				end
+
+				if type(errback) == 'function' then
+					promise.on('rejected', errback)
+				end
+			end
+		})
+
 		return promise
 	end
 
@@ -202,6 +214,18 @@ function exports.defer()
 			end
 		end
 	end)
+
+	setmetatable(deferred, {
+		__call = function(t, callback, errback)
+			if type(callback) == 'function' then
+				deferred.on('resolved', callback)
+			end
+
+			if type(errback) == 'function' then
+				deferred.on('rejected', errback)
+			end
+		end
+	})
 
 	return deferred
 end
