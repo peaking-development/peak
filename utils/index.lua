@@ -23,12 +23,12 @@ function exports.eventEmitter(t, debug)
 
 		-- TODO: Make this optional
 		if type(events[ev]) == 'table' then
-			if #events[ev] == 2 and type(event[ev][2]) == 'function' then
-				callHandler(events[ev], ...)
+			local handlers = events[ev]
+			if #handlers == 2 and threads.isThread(handlers[1]) and type(handlers[2]) == 'function' then
+				callHandler(handlers, ...)
 			else
-				local handlers = events[ev]
 				for i = 1, #handlers do
-					callHandler(handlers[i], ...)
+					exports.reerrorCall(2, callHandler, handlers[i], ...)
 				end
 			end
 		elseif debug then
@@ -65,11 +65,9 @@ function exports.eventEmitter(t, debug)
 
 		local handlers = events[ev]
 		if handlers == nil then
-			events[ev] = {handler}
-			return 1
+			events[ev] = handler
 		elseif type(handlers) == 'table' then
 			handlers[#handlers + 1] = handler
-			return #handlers
 		else
 			print('what is going on here? ', type(handlers))
 			print('someone messed with the events table')
