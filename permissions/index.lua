@@ -27,20 +27,3 @@ hmm inheriting granters, how?
 a granter is just a function(perm, ...): boolean
 if it returns nil then the checkPermission continues on to the next granter
 ]]
-
-
-function newDevice(id, ptype)
-	local device = {}
-	
-	function device.filter(...)
-		local filters = {...}
-		
-		for i = 1, #filters do
-			local filter = filters[i]
-			
-			if 
-		end
-	end
-	
-	return device
-end

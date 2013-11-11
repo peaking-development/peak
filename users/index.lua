@@ -10,33 +10,11 @@ local processes = require('peak-tasks/processes')
 	checkPermission: function(perm: string, ...: string): boolean
 }]]
 
--- users.newBase(name)
--- Creates a new user that doesn't have a checkPermission function
--- IMPLEMENT IT!
-function exports.newBase(name)
+-- users.new(name)
+function exports.new(name)
 	local user = {
 		name = name
 	}
-
-	return user
-end
-
-function exports.new(name)
-	local user = exports.newBase(name)
-
-	user.granters = {}
-
-	function user.checkPermission(perm, ...)
-		for i = 1, #user.granters do
-			local res = user.granters[i](perm, ...)
-
-			if res == true then
-				return true
-			elseif res == false then
-				return false
-			end
-		end
-	end
 
 	return user
 end

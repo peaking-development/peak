@@ -6,17 +6,19 @@ function exports.eventEmitter(t, debug)
 	local lastEvent
 	
 	local function callHandler(handler, ...)
-		if type(handler[2]) ~= 'function' then error('Bad handler', 2) end
-		if handler[1] == nil then
-			handler[2](...)
-		elseif threads.isThread(handler[1]) then
+		if type(handler) ~= 'table' or type(handler[2]) ~= 'function' then error('Bad handler', 2) end
+		if threads.isThread(handler[1]) then
 			threads.runInThread(unpack(handler), ...)
 		else
-			error('Bad handler', 2)
+			if handler[1] ~= nil then
+				error('Bad handler: It\'s not a thread but it\'s not nil', 2)
+			end
+
+			handler[2](...)
 		end
 	end
 
-	function t.emit(ev, ...)
+	function t:emit(ev, ...)
 		if exports.tableEqual(lastEvent, { ev, ... }) then return t end
 
 		lastEvent = { ev, ... }
@@ -24,27 +26,17 @@ function exports.eventEmitter(t, debug)
 		-- TODO: Make this optional
 		if type(events[ev]) == 'table' then
 			local handlers = events[ev]
-			if #handlers == 2 and threads.isThread(handlers[1]) and type(handlers[2]) == 'function' then
+			if #handlers == 2 and type(handlers[2]) == 'function' then
 				callHandler(handlers, ...)
 			else
+				-- print('multicall')
 				for i = 1, #handlers do
-					exports.reerrorCall(2, callHandler, handlers[i], ...)
+					callHandler(handlers[i], ...)
 				end
 			end
 		elseif debug then
 			print('Unhandled event: ' .. ev)
 		end
-
-		-- if type(events[ev]) == 'function' then
-		-- 	callHandler(events[ev], ...)
-		-- elseif type(events[ev]) == 'table' then
-		-- 	local handlers = events[ev]
-		-- 	for i = 1, #handlers do
-		-- 		callHandler(handlers[i], ...)
-		-- 	end
-		-- elseif debug then
-		-- 	print('Unhandled event: ' .. ev)
-		-- end
 
 		for i = 1, #queues do
 			queues[i](ev, ...)
@@ -53,13 +45,13 @@ function exports.eventEmitter(t, debug)
 		return t
 	end
 
-	function t.on(ev, handler)
+	function t:on(ev, handler)
 		if type(handler) ~= 'function' then error('Attempt to register non-function as interupt handler', 2) end
 
 		-- TODO: Make this optional
 		handler = {threads.current(), handler}
 
-		t.emit('newListener', ev, function(...)
+		self:emit('newListener', ev, function(...)
 			return callHandler(handler, ...)
 		end)
 
@@ -67,7 +59,11 @@ function exports.eventEmitter(t, debug)
 		if handlers == nil then
 			events[ev] = handler
 		elseif type(handlers) == 'table' then
-			handlers[#handlers + 1] = handler
+			if type(handlers[2] == 'function') then
+				events[ev] = {handlers, handler}
+			else
+				handlers[#handlers + 1] = handler
+			end
 		else
 			print('what is going on here? ', type(handlers))
 			print('someone messed with the events table')
@@ -76,7 +72,7 @@ function exports.eventEmitter(t, debug)
 		return t
 	end
 
-	function t.registerQueue(queue)
+	function t:registerQueue(queue)
 		if type(queue) ~= 'function' then error('Attempt to register non-function as queue', 2) end
 		queues[#queues + 1] = queue
 		return t
@@ -139,25 +135,25 @@ function exports.defer()
 		done = false
 	})
 
-	function deferred.resolve(...)
+	function deferred:resolve(...)
 		if not deferred.done then
 			deferred.done   = true
 			deferred.ok     = true
 			deferred.result = {...}
 
-			deferred.emit('resolved', ...)
+			deferred:emit('resolved', ...)
 		end
 
 		return deferred
 	end
 
-	function deferred.reject(...)
+	function deferred:reject(...)
 		if not deferred.done then
 			deferred.done   = true
 			deferred.ok     = false
 			deferred.result = {...}
 
-			deferred.emit('rejected', ...)
+			deferred:emit('rejected', ...)
 		end
 
 		return deferred
@@ -177,10 +173,10 @@ function exports.defer()
 			end
 		})
 
-		deferred.on('resolved', function(...) promise.emit('resolved', ...) end)
-		deferred.on('rejected', function(...) promise.emit('rejected', ...) end)
+		deferred:on('resolved', function(...) promise:emit('resolved', ...) end)
+		deferred:on('rejected', function(...) promise:emit('rejected', ...) end)
 
-		promise.on('newListener', function(event, listener)
+		promise:on('newListener', function(event, listener)
 			if promise.done then
 				if event == 'resolved' and promise.ok then
 					listener(unpack(promise.result))
@@ -193,11 +189,11 @@ function exports.defer()
 		setmetatable(promise, {
 			__call = function(t, callback, errback)
 				if type(callback) == 'function' then
-					promise.on('resolved', callback)
+					promise:on('resolved', callback)
 				end
 
 				if type(errback) == 'function' then
-					promise.on('rejected', errback)
+					promise:on('rejected', errback)
 				end
 			end
 		})
@@ -205,7 +201,7 @@ function exports.defer()
 		return promise
 	end
 
-	deferred.on('newListener', function(event, listener)
+	deferred:on('newListener', function(event, listener)
 		if deferred.done then
 			if event == 'resolved' and deferred.ok then
 				listener(unpack(deferred.result))
@@ -218,11 +214,11 @@ function exports.defer()
 	setmetatable(deferred, {
 		__call = function(t, callback, errback)
 			if type(callback) == 'function' then
-				deferred.on('resolved', callback)
+				deferred:on('resolved', callback)
 			end
 
 			if type(errback) == 'function' then
-				deferred.on('rejected', errback)
+				deferred:on('rejected', errback)
 			end
 		end
 	})
@@ -244,8 +240,16 @@ function exports.reerrorCall(level, fn, ...)
 	local ok, rtn = pcall(fn, ...)
 
 	if not ok then
-		reerror(rtn, level == 0 and 0 or level + 1)
+		exports.reerror(rtn, level == 0 and 0 or level + 1)
 	end
 
 	return rtn
+end
+
+function exports.curry(fn, ...)
+	local args = {...}
+
+	return function(...)
+		return fn(unpack(args), ...)
+	end
 end

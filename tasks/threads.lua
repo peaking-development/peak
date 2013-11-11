@@ -40,7 +40,7 @@ exports.type[2] = exports.type
 -- Create a new process that doesn't have run function
 -- IMPLEMENT IT!
 function exports.newBase(process)
-	local thread = utils.eventEmitter({
+	local self = utils.eventEmitter({
 		type       = exports.type,
 		alive      = false,
 		paused     = true,
@@ -52,82 +52,82 @@ function exports.newBase(process)
 		fs         = {}
 	})
 
-	function thread.queue(...)
+	function self:queue(...)
 		local args = {...}
 		-- if #args < 1 then print('Warning: Queuing an event with no arguments, this could cause problems', 2) end
-		thread.eventQueue[#thread.eventQueue + 1] = args
-		return #thread.eventQueue
+		self.eventQueue[#self.eventQueue + 1] = args
+		return #self.eventQueue
 	end
 
-	function thread.queueNOW(...)
+	function self:queueNOW(...)
 		local args = {...}
 		if #args < 1 then error('Attempt to queueNOW an event with no arguments', 2) end
-		table.insert(thread.eventQueue, 1, args)
+		table.insert(self.eventQueue, 1, args)
 		return 1
 	end
 
-	function thread.clearQueue()
-		thread.eventQueue = {}
+	function self:clearQueue()
+		self.eventQueue = {}
 	end
 
-	function thread.interupt(...)
-		local ok, iters = pcall(thread.queue, ...)
+	function self:interupt(...)
+		local ok, iters = pcall(self.queue, self, ...)
 		if not ok then error(iters, 2) end
-		local ok, rtn = pcall(thread.run, iters)
+		local ok, rtn = pcall(self.run, self, iters)
 		if not ok then error(rtn, 2) end
 		return rtn
 	end
 
-	return thread
+	return self
 end
 
 -- threads.new(process, [fn, ...])
 -- Creates a new thread in process, optionally running fn(...)
 function exports.new(process, fn, ...)
-	local thread = exports.newBase(process)
+	local self = exports.newBase(process)
 
 	local function runCoroutine(...)
 		local prev = current
-		current = thread
-		local rtn = coroutine.resume(thread.coroutine, ...)
+		current = self
+		local rtn = coroutine.resume(self.coroutine, ...)
 		current = prev
 
 		if utils.isPromise(rtn) then
-			thread.promise = rtn
+			self.promise = rtn
 		end
 	end
 
 	-- Maybe this should return how many iterations it got through
-	function thread.run(iters)
+	function self:run(iters)
 		if type(iters) ~= 'number' then iters = 1 end
 
-		if type(thread.coroutine) ~= 'thread' then return false end
+		if type(self.coroutine) ~= 'thread' then return false end
 
-		if thread.promise.done then
-			runCoroutine(unpack(thread.promise.result))
-			thread.promise = nil
+		if self.promise.done then
+			runCoroutine(unpack(self.promise.result))
+			self.promise = nil
 		end
 
 		for i = 1, iters do
-			if #thread.eventQueue == 0 then return false end
-			if thread.promise ~= nil then break end
-			runCoroutine(unpack(table.remove(thread.eventQueue)))
+			if #self.eventQueue == 0 then return false end
+			if self.promise ~= nil then break end
+			runCoroutine(unpack(table.remove(self.eventQueue)))
 		end
 	end
 
 	if type(fn) == 'function' then
-		exports.exec(thread, fn, ...)
+		exports.exec(self, fn, ...)
 	end
 
-	return thread
+	return self
 end
 
 -- threads.exec(thread, fn, ...)
 -- Replace what's running in thread with fn(...)
 function exports.exec(thread, fn, ...)
 	-- TODO: Permissions
-	thread.clearQueue()
-	thread.queue(...)
+	thread:clearQueue()
+	thread:queue(...)
 	thread.coroutine = coroutine.create(fn)
 	thread.alive = true
 end
@@ -154,10 +154,10 @@ function exports.clone(parent, opts, fn, ...)
 		local namespace = process.namespace -- if opts.namespace == 'share'
 
 		if opts.namespace == 'new' then
-			namespace = namespace.registerChild(processes.namespace())
+			namespace = namespace:registerChild(processes.namespace())
 		end
 
-		process = namespace.new(pproc, pproc.title, (function(opt)
+		process = namespace:new(pproc, pproc.title, (function(opt)
 			if opt == 'clone' then
 				return utils.cloneArr(pproc.args)
 			elseif opt == 'share' then
@@ -191,7 +191,7 @@ function exports.clone(parent, opts, fn, ...)
 		thread.env = utils.cloneDict(parent.env)
 	end
 
-	process.emit('newThread', thread)
+	process:emit('newThread', thread)
 
 	return thread
 end
@@ -199,37 +199,37 @@ end
 -- threads.scheduler()
 -- WIP
 function exports.scheduler()
-	local scheduler = utils.eventEmitter({ threads = {} })
+	local self = utils.eventEmitter({ threads = {} })
 
-	function scheduler.run(iters)
+	function self:run(iters)
 		if type(iters) ~= 'number' then iters = 1 end
 
 		for i = 1, iters do
-			for thread in pairs(scheduler.threads) do
+			for thread in pairs(self.threads) do
 				if thread.alive and not thread.paused then
-					thread.run()
+					thread:run()
 				end
 			end
 		end
 	end
 
-	function scheduler.queue(...)
-		for thread in pairs(scheduler.threads) do
-			thread.queue(...)
+	function self:queue(...)
+		for thread in pairs(self.threads) do
+			thread:queue(...)
 		end
 	end
 
-	function scheduler.add(thread)
-		scheduler.threads[thread] = thread
-		scheduler.emit('add', thread)
+	function self:add(thread)
+		self.threads[thread] = thread
+		self:emit('add', thread)
 	end
 
-	function scheduler.remove(thread)
-		scheduler.emit('remove', thread)
-		scheduler.threads[thread] = nil
+	function self:remove(thread)
+		self:emit('remove', thread)
+		self.threads[thread] = nil
 	end
 
-	return scheduler
+	return self
 end
 
 function exports.current() return current end
@@ -244,5 +244,6 @@ function exports.runInThread(thread, fn, ...)
 end
 
 function exports.isThread(thread)
-	return type(thread) == 'table' and thread.type == exports.type
+	return type(thread) == 'table' and
+	       thread.type  == exports.type
 end

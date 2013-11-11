@@ -11,145 +11,113 @@ local function peak()
 	local process = processes.newBase(nil, 1, 'kernel')
 	local namespace = processes.kernelNamespace(process)
 
-	local kernel = threads.newBase(process)
-	kernel.alive = true
-	kernel.paused = false
+	local self = threads.newBase(process)
+	self.alive = true
+	self.paused = false
 
-	process.registerQueue(kernel.emit)
-	namespace.registerQueue(kernel.emit)
+	process:registerQueue(utils.curry(self.emit, self))
+	namespace:registerQueue(utils.curry(self.emit, self))
 
-	kernel.namespace = namespace
-	kernel.thread    = kernel
+	self.namespace = namespace
+	self.thread    = self
 
 	-- Begin actual kernel section
 
-	kernel.modules = {}
-	kernel.debug   = false
+	self.modules = {}
+	self.debug   = false
 
-	utils.eventEmitter(kernel)
-
-	function kernel.checkKernelCall(func)
+	function self:checkKernelCall(func)
 		local user = users.current()
 
 		if user ~= nil and user.id ~= 0 then error(func .. ' can only be called from the kernel', 3) end
 	end
 
 	do
-		local oldEmit = kernel.emit
+		local oldEmit = self.emit
 
-		function kernel.emit(...)
-			kernel.checkKernelCall('kernel.emit')
+		function self:emit(...)
+			self:checkKernelCall('kernel.emit')
 
-			return oldEmit(...)
+			return oldEmit(self, ...)
 		end
 	end
 
 	--[===[Interupts]===]
-	function kernel.registerInterupt(ev, handler)
-		kernel.checkKernelCall('kernel.registerInterupt')
+	function self:registerInterupt(ev, handler)
+		self:checkKernelCall('kernel.registerInterupt')
 
-		kernel.on('interupt:' .. ev, handler)
-
-		-- if type(handler) ~= 'function' then error('Attempt to register non-function as interupt handler', 2) end
-
-		-- local interupts = kernel.interupts[ev]
-		-- if interupts == nil then
-		-- 	kernel.interupts[ev] = {handler}
-		-- 	return 1
-		-- elseif type(interupts) == 'table' then
-		-- 	interupts[#interupts + 1] = handler
-		-- 	return #interupts
-		-- elseif type(interupts) == 'function' then
-		-- 	kernel.interupts[ev] = {interupts, handler}
-		-- 	return 2
-		-- else
-		-- 	print('what is going on here? ', type(interupts))
-		-- 	print('someone messed with the interupt table')
-		-- end
+		self:on('interupt:' .. ev, handler)
 	end
 
-	function kernel.run(iters)
-		kernel.checkKernelCall('kernel.run')
+	function self:run(iters)
+		self:checkKernelCall('kernel.run')
 
 		if type(iters) ~= 'number' then iters = 1 end
 
 		for i = 1, iters do
-			if #kernel.eventQueue == 0 then break end
-			local ev = table.remove(kernel.eventQueue)
+			if #self.eventQueue == 0 then break end
+			local ev = table.remove(self.eventQueue)
 			if #ev == 0 then error('sthap it!', 2) end -- TODO: This is very descriptive
-			kernel.emit('interupt:' .. ev[1], unpack(ev))
+			self:emit('interupt:' .. ev[1], unpack(ev))
 		end
 
-		kernel.scheduler.run(iters)
+		self.scheduler:run(iters)
 
 		return true
-
-		-- if type(kernel.interupts[ev]) == 'function' then
-		-- 	kernel.interupts[ev](ev, ...)
-		-- elseif type(kernel.interupts[ev]) == 'table' then
-		-- 	local interupts = kernel.interupts[ev]
-		-- 	for i = 1, #interupts do
-		-- 		interupts[i](ev, ...)
-		-- 	end
-		-- elseif kernel.debug then
-		-- 	print('Unhandled interupt: ' .. ev)
-		-- end
-
-		-- kernel.scheduler.interupt(ev, ...)
 	end
 
 	--[===[Modules]===]
-	function kernel.loadModule(module)
+	function self:loadModule(module)
 		-- This should change
 		if users.current().id ~= 0 then error('kernel.loadModule can only be called from the kernel', 2) end
 
 		if type(module) ~= 'table' then error('Attempt to load non-table as module', 2) end
 
-		if type(kernel.modules[module.name]) ~= 'table' then
-			kernel.modules[module.name] = module
-			module.load(kernel)
+		if type(self.modules[module.name]) ~= 'table' then
+			self.modules[module.name] = module
+			module:load(self)
 		else
 			error('Module already loaded: ' .. module.name, 2)
 		end
 	end
 
-	function kernel.unloadModule(module)
+	function self:unloadModule(module)
 		-- This should change
 		if users.current().id ~= 0 then error('kernel.registerInterupt can only be called from the kernel', 2) end
 
 		if type(module) == 'table' then module = module.name end
 
-		kernel.modules[module].unload(kernel)
-		kernel.modules[module] = nil
+		self.modules[module]:unload(self)
+		self.modules[module] = nil
 	end
 
-	--[===[Device Manager]===]
-	kernel.devices = deviceManager({}, kernel.emit)
+	--[===[Rack]===]
+	self.rack = racks({})
+	self.rack:registerQueue(utils.curry(self.emit, self))
 
-	kernel.devices.detect()
+	self.rack:detect()
 
-	kernel.registerInterupt('peripheral', kernel.devices.newDeviceHandler)
-	kernel.registerInterupt('peripheral_detach', kernel.devices.oldDeviceHandler)
+	self:registerInterupt('peripheral', utils.curry(self.rack.newDeviceHandler, self.rack))
+	self:registerInterupt('peripheral_detach', utils.curry(self.rack.oldDeviceHandler, self.rack))
 
 	--[===[Scheduler]===]
-	kernel.scheduler = threads.scheduler()
-	kernel.registerQueue(kernel.scheduler.queue)
+	self.scheduler = threads.scheduler()
+	self:registerQueue(utils.curry(self.scheduler.queue, self.scheduler))
 
 	-- Process and Scheduler Interop
 	do
 		local function listenProcess(pid, process)
-			process.on('newThread', kernel.scheduler.add)
+			process:on('newThread', self.scheduler.add)
 
 			for i = 1, #process.threads do
-				kernel.scheduler.add(process.threads[i])
+				kernel.scheduler:add(process.threads[i])
 			end
 		end
 
 		local function listenNamespace(ns)
-			ns.on('new', listenProcess)
-			-- ns.on('newChild', listenNamespace)
+			ns:on('new', listenProcess)
 
-			local processes = ns.list()
+			local processes = ns:list()
 
 			for i = 1, #processes do
 				listenProcess(unpack(processes[i]))
@@ -159,7 +127,7 @@ local function peak()
 		listenNamespace(namespace)
 	end
 
-	return kernel
+	return self
 end
 
 module.exports = setmetatable({

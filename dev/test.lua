@@ -41,13 +41,16 @@ function promisesTest1()
 	-- 	print('Result: ' .. res)
 	-- end)
 
-	deferred.on('resolved', function(res)
+	deferred:on('resolved', function(res)
 		print('Result: ' .. res)
 	end)
 
-	deferred.resolve('stuff')
-	deferred.resolve('this should not be printed')
+	deferred:resolve('stuff')
+	deferred:resolve('this should not be printed')
 end
+
+threadsTest1()
+promisesTest1()
 
 local timeout = 0.5
 local timeoutTimer = os.startTimer(timeout)
@@ -58,9 +61,9 @@ while kernel.alive do
 	print('event: ' .. ev[1])
 
 	if ev[1] == 'timer' and ev[2] == timeoutTimer then
-		kernel.run()
+		kernel:run()
 		timeoutTimer = os.startTimer(timeout)
 	else
-		kernel.interupt(unpack(ev))
+		kernel:interupt(unpack(ev))
 	end
 end

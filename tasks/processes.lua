@@ -23,7 +23,7 @@ exports.type[2] = exports.type
 -- processes.newBase
 -- Create a new process
 function exports.newBase(parent, pid, title)
-	local process = utils.eventEmitter({
+	local self = utils.eventEmitter({
 		type    = exports.type,
 		id      = pid,
 		parent  = parent,
@@ -31,13 +31,13 @@ function exports.newBase(parent, pid, title)
 		threads = {}
 	})
 
-	function process.queue(ev, ...)
-		for i = 1, #process.threads do
-			process.threads[i].queue(ev, ...)
+	function self:queue(ev, ...)
+		for i = 1, #self.threads do
+			self.threads[i].queue(ev, ...)
 		end
 	end
 
-	return process
+	return self
 end
 
 -- TODO: figure out a way to switch namespaces
@@ -52,7 +52,7 @@ end
 -- Creates a new namespace
 -- The difference between this and processes.namespace() is this also returns the internal data
 function exports.namespaceBase()
-	local namespace
+	local self
 
 	local internal = {
 		processes = {},
@@ -65,7 +65,7 @@ function exports.namespaceBase()
 		local pid = internal.generatePid()
 		internal.processes[pid] = process
 		internal.pids[process]  = pid
-		namespace.emit('new', pid, process)
+		self.emit('new', pid, process)
 	end
 
 	function internal.generatePid()
@@ -75,16 +75,16 @@ function exports.namespaceBase()
 			pid = pid + 1
 		end
 
-		internal.lastPid = pid == namespace.maxPid and 1 or pid + 1
+		internal.lastPid = pid == self.maxPid and 1 or pid + 1
 
 		return pid
 	end
 
-	namespace = utils.eventEmitter({
+	self = utils.eventEmitter({
 		maxPid = 4096
 	})
 
-	function namespace.registerChild(ns)
+	function self:registerChild(ns)
 		local nsProcs = ns.list()
 		for i = 1, #nsProcs do
 			internal.importProcess(nil, nsProcs[i][2])
@@ -92,14 +92,14 @@ function exports.namespaceBase()
 
 		internal.children[#internal.children + 1] = ns
 
-		ns.on('new', internal.importProcess)
+		ns:on('new', internal.importProcess)
 
-		namespace.emit('newChild', ns)
+		self:emit('newChild', ns)
 
 		return ns
 	end
 
-	function namespace.list()
+	function self:list()
 		local procs = {}
 
 		for pid, proc in pairs(internal.processes) do
@@ -109,24 +109,24 @@ function exports.namespaceBase()
 		return procs
 	end
 
-	function namespace.new(parent, title, ...)
+	function self:new(parent, title, ...)
 		local pid     = internal.generatePid()
 		local process = exports.newBase(parent, pid, title, ...)
 
 		internal.processes[pid] = process
 		internal.pids[process]  = pid
 
-		process.on('exit', function(status)
+		process:on('exit', function(status)
 			internal.processes[pid] = nil
 			internal.pids[process]  = nil
 		end)
 
-		namespace.emit('new', pid, process)
+		self:emit('new', pid, process)
 
 		return process
 	end
 
-	return namespace, internal
+	return self, internal
 end
 
 -- processes.kernelNamespace(kernel)
@@ -142,7 +142,7 @@ function exports.kernelNamespace(kernel)
 	internal.processes[1] = kernel
 	internal.pids[kernel] = 1
 
-	function namespace.new() error('Cannot create new processes in the kernel namespace, create a new one', 2) end
+	function namespace:new() error('Cannot create new processes in the kernel namespace, create a new one', 2) end
 
 	return namespace
 end
