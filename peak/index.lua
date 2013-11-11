@@ -1,10 +1,10 @@
 --[=====[Peak Kernel by CoderPuppy]=====]
 
-local deviceManager = require('peak-rack')
-local processes     = require('peak-tasks/processes')
-local threads       = require('peak-tasks/threads')
-local utils         = require('peak-utils')
-local users         = require('peak-users')
+local processes = require('peak-tasks/processes')
+local threads   = require('peak-tasks/threads')
+local utils     = require('peak-utils')
+local users     = require('peak-users')
+local racks     = require('peak-racks')
 
 local function peak()
 	--[===[Process Manager]===]
