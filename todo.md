@@ -5,7 +5,7 @@ This might also have stuff for Pile, MountainOS and MatNet!
 	- Make sure loading from .pile folders works ✓
 	- Make Pile a package manager
 2. Make utils.eventEmitter take the thread into account ✓ UNTESTED
-3. Add promises
+3. Add promises ✓ NOT VERY TESTED
 4. Add support for waiting for callbacks in threads ✓ UNTESTED
 5. Make devices work better
 	- Use a wrap method (callMethod and listMethods) ✓ UNTESTED
