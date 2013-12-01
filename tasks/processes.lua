@@ -65,7 +65,7 @@ function exports.namespaceBase()
 		local pid = internal.generatePid()
 		internal.processes[pid] = process
 		internal.pids[process]  = pid
-		self.emit('new', pid, process)
+		self:emit('new', pid, process)
 	end
 
 	function internal.generatePid()

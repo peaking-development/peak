@@ -96,16 +96,16 @@ local function peak()
 	-- Process and Scheduler Interop
 	do
 		local function listenProcess(pid, process)
-			process:on('newThread', self.scheduler.add)
+			process:on('newThread', utils.curry(self.scheduler.add, self.scheduler))
 
 			for i = 1, #process.threads do
-				kernel.scheduler:add(process.threads[i])
+				self.scheduler:add(process.threads[i])
 			end
 		end
 
 		local function listenNamespace(ns)
 			ns:on('new', listenProcess)
-
+			
 			local processes = ns:list()
 
 			for i = 1, #processes do
