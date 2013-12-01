@@ -46,6 +46,13 @@ function exports.eventEmitter(t, debug)
 	function t:on(ev, handler)
 		if type(handler) ~= 'function' then error('Attempt to register non-function as interupt handler', 2) end
 
+		if threads.isThread(handler) then
+			local thread = handler
+			handler = function(...)
+				thread:queue(ev, ...)
+			end
+		end
+
 		-- TODO: Make this optional
 		handler = {threads.current(), handler}
 
