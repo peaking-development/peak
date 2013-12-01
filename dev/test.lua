@@ -52,17 +52,21 @@ end
 threadsTest1()
 promisesTest1()
 
-local timeout = 0.5
-local timeoutTimer = os.startTimer(timeout)
+-- local timeout = 0.5
+-- local timeoutTimer = os.startTimer(timeout)
+
+os.queueEvent('idle')
 
 while kernel.alive do
 	local ev = {os.pullEvent()}
 
-	print('event: ' .. ev[1])
+	-- print('event: ' .. ev[1])
 
-	if ev[1] == 'timer' and ev[2] == timeoutTimer then
+	-- if ev[1] == 'timer' and ev[2] == timeoutTimer then
+	if ev[1] == 'idle' then
 		kernel:run()
-		timeoutTimer = os.startTimer(timeout)
+		os.queueEvent('idle')
+		-- timeoutTimer = os.startTimer(timeout)
 	else
 		kernel:interupt(unpack(ev))
 	end
