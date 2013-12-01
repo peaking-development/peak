@@ -1,7 +1,5 @@
 --[=====[Peak Threading by CoderPuppy]=====]
 -- Threads and scheduler
--- This might have to be specific to peak
--- Mainly the processes have their own threads
 
 local processes = require('./processes')
 local utils     = require('peak-utils')
