@@ -232,7 +232,27 @@ function exports.scheduler()
 	return self
 end
 
-function exports.current() return current end
+do
+	local self = exports.newBase(processes.craftosProcess)
+
+	function self:run(iters)
+		if type(iters) ~= 'number' then iters = 1 end
+
+		for i = 1, iters do
+			if #self.eventQueue == 0 then break end
+			local ev = table.remove(self.eventQueue)
+			os.queueEvent(unpack(ev))
+		end
+
+		return true
+	end
+
+	processes.craftosProcess:emit('newThread', self)
+
+	exports.craftosThread = self
+end
+
+function exports.current() return current or exports.craftosThread end
 
 function exports.runInThread(thread, fn, ...)
 	if type(fn) ~= 'function' then error('Not a function', 2) end

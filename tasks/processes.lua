@@ -1,6 +1,6 @@
 --[=====[Peak Processes by CoderPuppy]=====]
 
-local threads = require('./threads')
+local threads
 local utils   = require('peak-utils')
 
 --[[process = {
@@ -160,3 +160,11 @@ function exports.current()
 	local thread = threads.current()
 	if thread ~= nil then return thread.process end
 end
+
+do
+	local self = exports.newBase(nil, -1, 'craftos')
+
+	exports.craftosProcess = self
+end
+
+threads = require('./threads')
