@@ -43,12 +43,6 @@ local function peak()
 	end
 
 	--[===[Interupts]===]
-	function self:registerInterupt(ev, handler)
-		self:checkKernelCall('kernel.registerInterupt')
-
-		self:on('interupt:' .. ev, handler)
-	end
-
 	function self:run(iters)
 		self:checkKernelCall('kernel.run')
 
@@ -57,8 +51,8 @@ local function peak()
 		for i = 1, iters do
 			if #self.eventQueue == 0 then break end
 			local ev = table.remove(self.eventQueue)
-			if #ev == 0 then error('sthap it!', 2) end -- TODO: This is very descriptive
-			self:emit('interupt:' .. ev[1], unpack(ev))
+			self.rack:emit('interupt', unpack(ev))
+			self.rack:emit('interupt:' .. ev[1], unpack(ev))
 		end
 
 		self.scheduler:run(iters)
@@ -93,12 +87,7 @@ local function peak()
 
 	--[===[Rack]===]
 	self.rack = racks({})
-	self.rack:registerQueue(utils.curry(self.emit, self))
-
 	self.rack:detect()
-
-	self:registerInterupt('peripheral', utils.curry(self.rack.newDeviceHandler, self.rack))
-	self:registerInterupt('peripheral_detach', utils.curry(self.rack.oldDeviceHandler, self.rack))
 
 	--[===[Scheduler]===]
 	self.scheduler = threads.scheduler()
