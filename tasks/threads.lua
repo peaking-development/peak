@@ -103,7 +103,7 @@ function exports.new(process, fn, ...)
 
 		if type(self.coroutine) ~= 'thread' then return false end
 
-		if self.promise.done then
+		if self.promise ~= nil and self.promise.done then
 			runCoroutine(unpack(self.promise.result))
 			self.promise = nil
 		end
@@ -157,7 +157,7 @@ function exports.clone(parent, opts, fn, ...)
 			namespace = namespace:registerChild(processes.namespace())
 		end
 
-		process = namespace:new(pproc, pproc.title, (function(opt)
+		process = namespace:new(pproc, pproc.title, unpack((function(opt)
 			if opt == 'clone' then
 				return utils.cloneArr(pproc.args)
 			elseif opt == 'share' then
@@ -165,7 +165,7 @@ function exports.clone(parent, opts, fn, ...)
 			else -- if opt == 'new' then
 				return {}
 			end
-		end)(opts.args))
+		end)(opts.args)))
 	end
 
 	local thread = exports.new(process, fn, ...)

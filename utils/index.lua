@@ -1,4 +1,4 @@
-local threads = require('peak-tasks/threads')
+local threads
 
 function exports.eventEmitter(t, debug)
 	local events = {}
@@ -8,7 +8,7 @@ function exports.eventEmitter(t, debug)
 	local function callHandler(handler, ...)
 		if type(handler) ~= 'table' or type(handler[2]) ~= 'function' then error('Bad handler', 2) end
 		if threads.isThread(handler[1]) then
-			threads.runInThread(unpack(handler), ...)
+			threads.runInThread(handler[1], handler[2], ...)
 		else
 			if handler[1] ~= nil then
 				error('Bad handler: It\'s not a thread but it\'s not nil', 2)
@@ -253,3 +253,5 @@ function exports.curry(fn, ...)
 		return fn(unpack(args), ...)
 	end
 end
+
+threads = require('peak-tasks/threads')
