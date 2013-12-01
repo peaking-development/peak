@@ -8,9 +8,9 @@ local utils = require('peak-utils')
 -- You need to implement callMethod and listMethods or wrap
 function exports.new(id, dtype)
 	local self = {
-		id = id,
-		api = api,
-		type = dtype
+		id             = id,
+		type           = dtype,
+		connectionType = 'virtual'
 	}
 
 	function self:callMethod(name, ...) return self:wrap()[name](...) end
@@ -43,6 +43,8 @@ end
 
 function exports.wrap(id)
 	local self = exports.new(id, peripheral.getType(id))
+
+	self.connectionType = 'hardware'
 
 	function self:callMethod(name, ...) return peripheral.callMethod(id, name, ...) end
 	function self:listMethods() return peripheral.listMethods(id) end
