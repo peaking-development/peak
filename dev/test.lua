@@ -7,6 +7,8 @@ local peak = require('peak')
 local kernel = peak(_G)
 
 function threadsTest1()
+	print('forking new process')
+
 	local test = peak.threads.clone(kernel, {
 		namespace = 'new',
 		process = 'new',
@@ -16,13 +18,17 @@ function threadsTest1()
 	}, function()
 		print('in thread')
 
-		print(utils.filterProp('type:test', 'type', 'test'))
+		-- print(utils.filterProp('type:test', 'type', 'test'))
 
-		kernel.alive = false
+		-- kernel.alive = false
+
+		kernel.rack:on('interupt', function(ev, id)
+			print('interupt: ' .. ev)
+		end)
 
 		while true do
 			local ev = {coroutine.yield()}
-			-- print(ev[1])
+			print('event: ', ev[1])
 		end
 	end)
 
