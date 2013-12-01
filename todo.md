@@ -9,5 +9,5 @@ This might also have stuff for Pile, MountainOS and MatNet!
 4. Add support for waiting for callbacks in threads ✓ UNTESTED
 5. Make devices work better
 	- Use a wrap method (callMethod and listMethods) ✓ UNTESTED
-	- More info for hardware devices
+	- Add a connection type field ✓ UNTESTED
 6. Switch OO-style ✓ NOT VERY TESTED
