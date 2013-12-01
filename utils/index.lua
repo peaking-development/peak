@@ -23,13 +23,11 @@ function exports.eventEmitter(t, debug)
 
 		lastEvent = { ev, ... }
 
-		-- TODO: Make this optional
 		if type(events[ev]) == 'table' then
 			local handlers = events[ev]
 			if #handlers == 2 and type(handlers[2]) == 'function' then
 				callHandler(handlers, ...)
 			else
-				-- print('multicall')
 				for i = 1, #handlers do
 					callHandler(handlers[i], ...)
 				end
