@@ -78,6 +78,8 @@ function exports.newBase(process)
 		return rtn
 	end
 
+	table.insert(process.threads, self)
+
 	return self
 end
 
