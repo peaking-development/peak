@@ -44,6 +44,7 @@ function exports.newBase(process)
 		paused     = true,
 		running    = false,
 		eventQueue = {},
+		file       = {}
 		info       = {},
 		process    = process,
 		env        = {},
