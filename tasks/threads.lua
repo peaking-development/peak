@@ -89,7 +89,7 @@ function exports.new(process, fn, ...)
 	local function runCoroutine(...)
 		local prev = current
 		current = self
-		local rtn = coroutine.resume(self.coroutine, ...)
+		local rtn = exports.runInThread(self, coroutine.resume, self.coroutine, ...)
 		current = prev
 
 		if utils.isPromise(rtn) then
