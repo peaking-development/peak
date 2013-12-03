@@ -96,6 +96,8 @@ local function peak()
 	-- Process and Scheduler Interop
 	do
 		local function listenProcess(pid, process)
+			if process == self.process then return false end
+
 			process:on('newThread', utils.curry(self.scheduler.add, self.scheduler))
 
 			for i = 1, #process.threads do
