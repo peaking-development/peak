@@ -1,0 +1,21 @@
+shell.run 'pile.lua init'
+
+local CraftFSEmulator = require('./craftfs-emulator')
+local MountFS         = require('./mount-fs')
+local CraftFS         = require('./craft-fs')
+local PathFS          = require('./path-fs')
+local FS              = require('./fs')
+
+local root = MountFS.new()
+root:mount('/cc', CraftFS.new(fs))
+local handle = root:open('root', '/cc/test.lua', 'r')
+-- print(textutils.serialize({ handle:read('*l') }))
+handle:close()
+local emuFS = CraftFSEmulator.new(root)
+local wat = CraftFS.new(emuFS.craftFS)
+local circular = CraftFSEmulator.new(wat)
+-- print(circular.craftFS.open('/cc/test.lua', 'r').readAll())
+local realFS = PathFS.new(wat, "cc")
+local handle = realFS:open('root', '/test.lua', 'r')
+print(textutils.serialize({ handle:read('*l') }))
+handle:close()
