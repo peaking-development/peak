@@ -31,8 +31,7 @@ local current
 }]]
 
 -- Totally unique, though it doesn't serialize
-exports.type    = {'THREAD'}
-exports.type[2] = exports.type
+exports.type = module.filename .. ':thread'
 
 -- threads.newBase(process)
 -- Create a new thread that doesn't have run function
@@ -173,17 +172,18 @@ function exports.clone(parent, opts, fn, ...)
 
 	if opts.files == 'share' then
 		thread.files = parent.files
-	-- elseif opts.file == 'new' then thread.files = {}
+	-- elseif opts.file == 'new' then
+	-- 	thread.files = {}
 	end
 
 	if opts.fs == 'share' then
 		thread.fs = parent.fs
-	else -- if opts.fs == 'clone' then
-		-- local fs  = parent.fs
-		-- thread.fs = {
-		-- 	current = fs.current;
-		-- 	root    = fs.root;
-		-- }
+	-- elseif opts.fs == 'clone' then
+	--	 local fs  = parent.fs
+	--	 thread.fs = {
+	--	 	current = fs.current;
+	--	 	root    = fs.root;
+	--	 }
 	end
 
 	if opts.env == 'share' then
@@ -231,26 +231,6 @@ function exports.scheduler()
 	end
 
 	return self
-end
-
-do
-	local self = exports.newBase(processes.craftosProcess)
-
-	function self:run(iters)
-		if type(iters) ~= 'number' then iters = 1 end
-
-		for i = 1, iters do
-			if #self.eventQueue == 0 then break end
-			local ev = table.remove(self.eventQueue)
-			os.queueEvent(unpack(ev))
-		end
-
-		return true
-	end
-
-	processes.craftosProcess:emit('newThread', self)
-
-	exports.craftosThread = self
 end
 
 function exports.current() return current or exports.craftosThread end

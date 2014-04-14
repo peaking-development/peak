@@ -7,6 +7,19 @@ function utils.eventEmitter(t, debug)
 	local queues = {}
 	local lastEvent
 
+	local function callHandler(handler, ...)
+		if type(handler) ~= 'table' or type(handler[2]) ~= 'function' then error('Bad handler', 2) end
+		if threads.isThread(handler[1]) then
+			threads.runInThread(handler[1], handler[2], ...)
+		else
+			if handler[1] ~= nil then
+				error('Bad handler: It\'s not a thread but it\'s not nil', 2)
+			end
+
+			handler[2](...)
+		end
+	end
+
 	function t:emit(ev, ...)
 		if utils.tableEqual(lastEvent, { ev, ... }) then return t end
 
@@ -15,10 +28,10 @@ function utils.eventEmitter(t, debug)
 		if type(events[ev]) == 'table' then
 			local handlers = events[ev]
 			if #handlers == 2 and type(handlers[2]) == 'function' then
-				handlers:queue(ev, ...)
+				callHandler(handlers, ...)
 			else
 				for i, handler in ipairs(handlers) do
-					handler:queue(ev, ...)
+					callHandler(handler, ...)
 				end
 			end
 		elseif debug then
@@ -28,21 +41,26 @@ function utils.eventEmitter(t, debug)
 		return t
 	end
 
-	function t:on(ev, thread)
-		if not threads.isThread(thread) then
-			error('Attempt to register non-thread as handler', 2)
+	function t:on(ev, handler)
+		if threads.isThread(handler) then
+			local thread = handler
+			handler = function(...)
+				thread:queue(ev, ...)
+			end
 		end
 
-		self:emit('newListener', ev, thread)
+		if type(handler) ~= 'function' then error('Attempt to register non-function as event handler', 2) end
+
+		self:emit('newListener', ev, handler)
 
 		local handlers = events[ev]
 		if handlers == nil then
-			events[ev] = thread
+			events[ev] = handler
 		elseif type(handlers) == 'table' then
 			if type(handlers[2] == 'function') then
-				events[ev] = {handlers, thread}
+				events[ev] = {handlers, handler}
 			else
-				handlers[#handlers + 1] = thread
+				handlers[#handlers + 1] = handler
 			end
 		else
 			print('what is going on here? ', type(handlers))

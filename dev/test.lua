@@ -9,7 +9,7 @@ local kernel = peak(_G)
 function threadsTest1()
 	print('forking new process')
 
-	local test = peak.threads.clone(kernel, {
+	local test = peak.threads.clone(kernel.thread, {
 		namespace = 'new',
 		process = 'new',
 		files = 'new',
@@ -42,17 +42,17 @@ threadsTest1()
 
 os.queueEvent('idle')
 
-while kernel.alive do
+while kernel.thread.alive do
 	local ev = {os.pullEvent()}
 
 	-- print('event: ' .. ev[1])
 
 	-- if ev[1] == 'timer' and ev[2] == timeoutTimer then
 	if ev[1] == 'idle' then
-		kernel:run()
+		kernel.thread:run()
 		os.queueEvent('idle')
 		-- timeoutTimer = os.startTimer(timeout)
 	else
-		kernel:interupt(unpack(ev))
+		kernel.thread:interupt(unpack(ev))
 	end
 end

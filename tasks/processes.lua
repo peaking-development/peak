@@ -4,17 +4,12 @@ local threads
 local utils   = require('peak-utils')
 
 --[[process = {
-	id             = process id,
-	parent         = parent process,
-	title          = name of process,
-	-- These are annoying because no main thread, TODO: Remove them
-	-- main           = the file to run in the main thread,
-	-- args           = the arguments passed to this process,
-	threads        = this process's threads,
-	namespace      = the namespace this process is in,
-	queue(ev, ...) = queue and event to all the threads
-
-	-- PIDs should generally be numbers
+	id             = process id;
+	parent         = parent process;
+	title          = name of process;
+	threads        = this process's threads;
+	namespace      = the namespace this process is in;
+	queue(ev, ...) = queue and event to all the threads;
 }]]
 
 exports.type    = {'PROCESS'}
@@ -42,17 +37,19 @@ end
 
 -- TODO: figure out a way to switch namespaces
 --[[namespace = utils.eventEmitter({
-	registerChild(namespace): namespace = register a child namespace, returns the child,
-	new(parent, title, ...): process = create a process,
+	registerChild(namespace): namespace = register a child namespace, returns the child;
+	new(parent, title, ...): process = create a process;
 	-- TODO: This probably needs a filtering mechanic
-	list(): processes = get all the processes
+	list(): processes = get all the processes;
 })]]
 
 -- processes.namespaceBase() = namespace, internal
 -- Creates a new namespace
 -- The difference between this and processes.namespace() is this also returns the internal data
 function exports.namespaceBase()
-	local self
+	local self = utils.eventEmitter({
+		maxPid = 4096;
+	})
 
 	local internal = {
 		processes = {};
@@ -79,10 +76,6 @@ function exports.namespaceBase()
 
 		return pid
 	end
-
-	self = utils.eventEmitter({
-		maxPid = 4096;
-	})
 
 	function self:registerChild(ns)
 		local nsProcs = ns.list()
@@ -111,7 +104,7 @@ function exports.namespaceBase()
 
 	function self:new(parent, title, ...)
 		local pid     = internal.generatePid()
-		local process = exports.newBase(parent, pid, title, ...)
+		local process = exports.newBase(parent or self.process, pid, title, ...)
 
 		internal.processes[pid] = process
 		internal.pids[process]  = pid
@@ -159,12 +152,6 @@ end
 function exports.current()
 	local thread = threads.current()
 	if thread ~= nil then return thread.process end
-end
-
-do
-	local self = exports.newBase(nil, -1, 'craftos')
-
-	exports.craftosProcess = self
 end
 
 threads = require('./threads')

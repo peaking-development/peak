@@ -7,30 +7,16 @@ local users     = require('peak-users')
 local racks     = require('peak-racks')
 
 local function peak()
-	--[===[Process Manager]===]
-	local process = processes.newBase(nil, 1, 'kernel')
-	local namespace = processes.kernelNamespace(process)
+	local self = {}
 
-	local self = threads.newBase(process)
-	self.alive = true
-	self.paused = false
-
-	process:registerQueue(utils.curry(self.emit, self))
-	namespace:registerQueue(utils.curry(self.emit, self))
-
-	self.namespace = namespace
-	self.thread    = self
+	self.process   = processes.newBase(nil, 1, 'kernel')
+	self.namespace = processes.kernelNamespace(self.process)
+	self.thread    = threads.newBase(self.process)
 
 	-- Begin actual kernel section
 
 	self.modules = {}
 	self.debug   = false
-
-	function self:checkKernelCall(func)
-		local user = users.current()
-
-		if user ~= nil and user.id ~= 0 then error(func .. ' can only be called from the kernel', 3) end
-	end
 
 	do
 		local oldEmit = self.emit
@@ -43,16 +29,17 @@ local function peak()
 	end
 
 	--[===[Interupts]===]
-	function self:run(iters)
-		self:checkKernelCall('kernel.run')
+	self.thread.alive = true
+	self.thread.paused = false
 
+	function self.thread.run(threadSelf, iters)
 		if type(iters) ~= 'number' then iters = 1 end
 
 		for i = 1, iters do
-			if #self.eventQueue == 0 then break end
-			local ev = table.remove(self.eventQueue)
-			self.rack:emit('interupt', unpack(ev))
-			self.rack:emit('interupt:' .. ev[1], unpack(ev))
+			if #self.thread.eventQueue == 0 then break end
+			local ev = table.remove(self.thread.eventQueue)
+			-- self.rack:emit('interupt', unpack(ev))
+			-- self.rack:emit('interupt:' .. ev[1], unpack(ev))
 		end
 
 		self.scheduler:run(iters)
@@ -62,9 +49,6 @@ local function peak()
 
 	--[===[Modules]===]
 	function self:loadModule(module)
-		-- This should change
-		if users.current().id ~= 0 then error('kernel.loadModule can only be called from the kernel', 2) end
-
 		if type(module) ~= 'table' then error('Attempt to load non-table as module', 2) end
 
 		if type(self.modules[module.name]) ~= 'table' then
@@ -76,9 +60,6 @@ local function peak()
 	end
 
 	function self:unloadModule(module)
-		-- This should change
-		if users.current().id ~= 0 then error('kernel.registerInterupt can only be called from the kernel', 2) end
-
 		if type(module) == 'table' then module = module.name end
 
 		self.modules[module]:unload(self)
@@ -86,12 +67,11 @@ local function peak()
 	end
 
 	--[===[Rack]===]
-	self.rack = racks({})
-	self.rack:detect()
+	-- self.rack = racks({})
+	-- self.rack:detect()
 
 	--[===[Scheduler]===]
 	self.scheduler = threads.scheduler()
-	self:registerQueue(utils.curry(self.scheduler.queue, self.scheduler))
 
 	-- Process and Scheduler Interop
 	do
@@ -115,7 +95,7 @@ local function peak()
 			end
 		end
 
-		listenNamespace(namespace)
+		listenNamespace(self.namespace)
 	end
 
 	return self
