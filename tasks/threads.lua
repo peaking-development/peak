@@ -8,26 +8,26 @@ local users     = require('peak-users')
 local current
 
 --[[thread = {
-	paused        = whether this thread is paused,
-	running       = whether this thread is currently running, -- Not really necessary
-	alive         = 
-	eventQueue    = all the events that are queued for this thread in the form { ev, unpack(args) },
-	process       = the process this thread is associated with,
-	env           = environment variables,
-	files         = file descriptors,
-	queue(...)    = queue an event,
-	queueNOW(...) = queue an event for the next run,
-	interupt(...) = queue and run an event,
-	run(iters: 1) = run a specific number of events,
+	paused        = whether this thread is paused;
+	running       = whether this thread is currently running, -- Not really necessary;
+	alive         = whether this thread hasn't exited
+	eventQueue    = all the events that are queued for this thread in the form { ev, unpack(args) };
+	process       = the process this thread is associated with;
+	env           = environment variables;
+	files         = file descriptors;
+	queue(...)    = queue an event;
+	queueNOW(...) = queue an event for the next run;
+	interupt(...) = queue and run an event;
+	run(iters: 1) = run a specific number of events;
 	fs            = {
-		root    = root of the filesystem as seen by this thread,
-		current = current directory of this thread
-	},
+		root    = root of the filesystem as seen by this thread;
+		current = current directory of this thread;
+	};
 	-- Everything in info is optional
 	info          = {
-		file = the file that is running in this thread,
-		args = the initial arguments
-	}
+		file = the file that is running in this thread;
+		args = the initial arguments;
+	};
 }]]
 
 -- Totally unique, though it doesn't serialize
@@ -35,20 +35,20 @@ exports.type    = {'THREAD'}
 exports.type[2] = exports.type
 
 -- threads.newBase(process)
--- Create a new process that doesn't have run function
+-- Create a new thread that doesn't have run function
 -- IMPLEMENT IT!
 function exports.newBase(process)
 	local self = utils.eventEmitter({
-		type       = exports.type,
-		alive      = false,
-		paused     = true,
-		running    = false,
-		eventQueue = {},
-		file       = {}
-		info       = {},
-		process    = process,
-		env        = {},
-		fs         = {}
+		type       = exports.type;
+		alive      = false;
+		paused     = true;
+		running    = false;
+		eventQueue = {};
+		file       = {};
+		info       = {};
+		process    = process;
+		env        = {};
+		fs         = {};
 	})
 
 	function self:queue(...)
@@ -136,12 +136,12 @@ end
 -- threads.clone(parent: thread, opts, fn: function, ...)
 -- clones the parent thread
 --[[opts = {
-	process   = default: share, new: creates a new process, share: just associates with the existing process,
-	namespace = only relevant with process = new, default: share, new: create a new namespace, share: use the existing namespace,
-	args      = default: new, clone: clone the argument list (doesn't clone each argument), share: keep the same argument list, new: create a new argument list,
-	files     = default: new, share: share the file descriptor table (and all file descriptors in it), new: create a new table,
-	fs        = default: clone, clone: copy the fs info over, share: use the same fs info (means that chdir will affect them both),
-	env       = default: clone, clone: copy the environment over, share: use the same environment
+	process   = default: share, new: creates a new process, share: just associates with the existing process;
+	namespace = only relevant with process = new, default: share, new: create a new namespace, share: use the existing namespace;
+	args      = default: new, clone: clone the argument list (doesn't clone each argument), share: keep the same argument list, new: create a new argument list;
+	files     = default: new, share: share the file descriptor table (and all file descriptors in it), new: create a new table;
+	fs        = default: clone, clone: copy the fs info over, share: use the same fs info (means that chdir will affect them both);
+	env       = default: clone, clone: copy the environment over, share: use the same environment;
 }]]
 function exports.clone(parent, opts, fn, ...)
 	-- TODO: Permissions
@@ -181,8 +181,8 @@ function exports.clone(parent, opts, fn, ...)
 	else -- if opts.fs == 'clone' then
 		-- local fs  = parent.fs
 		-- thread.fs = {
-		-- 	current = fs.current,
-		-- 	root    = fs.root
+		-- 	current = fs.current;
+		-- 	root    = fs.root;
 		-- }
 	end
 
