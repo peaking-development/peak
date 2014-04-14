@@ -1,4 +1,4 @@
-local util = require('./util')
+local pathUtils = require('./path-utils')
 local FS   = require('./fs')
 
 local MountFS = exports
@@ -17,7 +17,7 @@ MountFS.proto = {
 	end;
 
 	mount = function(self, mountPoint, mountFS)
-		mountPoint = util.normPath(mountPoint)
+		mountPoint = pathUtils.normPath(mountPoint)
 		self.mounts[mountPoint] = mountFS
 	end;
 
@@ -33,7 +33,7 @@ MountFS.proto = {
 			end
 
 			oldPath = path
-			path = util.normPath(path .. '/..')
+			path = pathUtils.normPath(path .. '/..')
 		end
 	end;
 

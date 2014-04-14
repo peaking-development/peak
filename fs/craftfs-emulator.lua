@@ -1,4 +1,4 @@
-local util = require('./util')
+local pathUtils = require('./path-utils')
 
 local CraftFSEmulator = exports
 
@@ -18,11 +18,11 @@ CraftFSEmulator.proto = {
 			end;
 
 			getName = function(path)
-				return util.basename(path)
+				return pathUtils.basename(path)
 			end;
 
 			combine = function(a, b)
-				return util.joinPath(a, b)
+				return pathUtils.joinPath(a, b)
 			end;
 
 			open = function(path, mode)

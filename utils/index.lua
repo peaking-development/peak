@@ -1,73 +1,48 @@
+local utils = exports
+
 local threads
 
-function exports.eventEmitter(t, debug)
+function utils.eventEmitter(t, debug)
 	local events = {}
 	local queues = {}
 	local lastEvent
-	
-	local function callHandler(handler, ...)
-		if type(handler) ~= 'table' or type(handler[2]) ~= 'function' then error('Bad handler', 2) end
-		if threads.isThread(handler[1]) then
-			threads.runInThread(handler[1], handler[2], ...)
-		else
-			if handler[1] ~= nil then
-				error('Bad handler: It\'s not a thread but it\'s not nil', 2)
-			end
-
-			handler[2](...)
-		end
-	end
 
 	function t:emit(ev, ...)
-		if exports.tableEqual(lastEvent, { ev, ... }) then return t end
+		if utils.tableEqual(lastEvent, { ev, ... }) then return t end
 
 		lastEvent = { ev, ... }
 
 		if type(events[ev]) == 'table' then
 			local handlers = events[ev]
 			if #handlers == 2 and type(handlers[2]) == 'function' then
-				callHandler(handlers, ...)
+				handlers:queue(ev, ...)
 			else
-				for i = 1, #handlers do
-					callHandler(handlers[i], ...)
+				for i, handler in ipairs(handlers) do
+					handler:queue(ev, ...)
 				end
 			end
 		elseif debug then
 			print('Unhandled event: ' .. ev)
 		end
 
-		for i = 1, #queues do
-			queues[i](ev, ...)
-		end
-
 		return t
 	end
 
-	function t:on(ev, handler)
-		if type(handler) ~= 'function' then error('Attempt to register non-function as interupt handler', 2) end
-
-		if threads.isThread(handler) then
-			local thread = handler
-			handler = function(...)
-				thread:queue(ev, ...)
-			end
+	function t:on(ev, thread)
+		if not threads.isThread(thread) then
+			error('Attempt to register non-thread as handler', 2)
 		end
 
-		-- TODO: Make this optional
-		handler = {threads.current(), handler}
-
-		self:emit('newListener', ev, function(...)
-			return callHandler(handler, ...)
-		end)
+		self:emit('newListener', ev, thread)
 
 		local handlers = events[ev]
 		if handlers == nil then
-			events[ev] = handler
+			events[ev] = thread
 		elseif type(handlers) == 'table' then
 			if type(handlers[2] == 'function') then
-				events[ev] = {handlers, handler}
+				events[ev] = {handlers, thread}
 			else
-				handlers[#handlers + 1] = handler
+				handlers[#handlers + 1] = thread
 			end
 		else
 			print('what is going on here? ', type(handlers))
@@ -77,16 +52,10 @@ function exports.eventEmitter(t, debug)
 		return t
 	end
 
-	function t:registerQueue(queue)
-		if type(queue) ~= 'function' then error('Attempt to register non-function as queue', 2) end
-		queues[#queues + 1] = queue
-		return t
-	end
-
 	return t
 end
 
-function exports.cloneArr(arr)
+function utils.cloneArr(arr)
 	if type(arr) ~= 'table' then error('Attempt to cloneArr a non-table: ' .. type(dict), 2) end
 	local new = {}
 
@@ -97,7 +66,7 @@ function exports.cloneArr(arr)
 	return new
 end
 
-function exports.cloneDict(dict)
+function utils.cloneDict(dict)
 	if type(dict) ~= 'table' then error('Attempt to cloneDict a non-table: ' .. type(dict), 2) end
 	local new = {}
 
@@ -108,7 +77,7 @@ function exports.cloneDict(dict)
 	return new
 end
 
-function exports.tableEqual(a, b)
+function utils.tableEqual(a, b)
 	if type(a) ~= 'table' or type(b) ~= 'table' then return false end
 	for k, v in pairs(a) do
 		if b[k] ~= v then return false end
@@ -121,7 +90,7 @@ function exports.tableEqual(a, b)
 	return true
 end
 
-function exports.filterProp(arg, name, val)
+function utils.filterProp(arg, name, val)
 	if arg:sub(1, #name + 1) == name .. '=' then if arg:sub(#name + 2) ~= val then
 		return false
 	end elseif arg:sub(1, #name + 1) == name .. '!' then if arg:sub(#name + 2) == val then
@@ -135,128 +104,63 @@ function exports.filterProp(arg, name, val)
 	return true
 end
 
-function exports.defer()
-	local deferred = exports.eventEmitter({
-		done = false
-	})
-
-	function deferred:resolve(...)
-		if not deferred.done then
-			deferred.done   = true
-			deferred.ok     = true
-			deferred.result = {...}
-
-			deferred:emit('resolved', ...)
-		end
-
-		return deferred
-	end
-
-	function deferred:reject(...)
-		if not deferred.done then
-			deferred.done   = true
-			deferred.ok     = false
-			deferred.result = {...}
-
-			deferred:emit('rejected', ...)
-		end
-
-		return deferred
-	end
-
-	function deferred.promise()
-		local promise = exports.eventEmitter({})
-
-		setmetatable(promise, {
-			__index = function(t, k)
-				if k     == 'done'   then return deferred.done
-				elseif k == 'ok'     then return deferred.ok
-				elseif k == 'result' then return deferred.result
-				else
-					return rawget(t, k)
-				end
-			end
-		})
-
-		deferred:on('resolved', function(...) promise:emit('resolved', ...) end)
-		deferred:on('rejected', function(...) promise:emit('rejected', ...) end)
-
-		promise:on('newListener', function(event, listener)
-			if promise.done then
-				if event == 'resolved' and promise.ok then
-					listener(unpack(promise.result))
-				elseif event == 'rejected' and not promise.ok then
-					listener(unpack(promise.result))
-				end
-			end
-		end)
-
-		setmetatable(promise, {
-			__call = function(t, callback, errback)
-				if type(callback) == 'function' then
-					promise:on('resolved', callback)
-				end
-
-				if type(errback) == 'function' then
-					promise:on('rejected', errback)
-				end
-			end
-		})
-
-		return promise
-	end
-
-	deferred:on('newListener', function(event, listener)
-		if deferred.done then
-			if event == 'resolved' and deferred.ok then
-				listener(unpack(deferred.result))
-			elseif event == 'rejected' and not deferred.ok then
-				listener(unpack(deferred.result))
-			end
-		end
-	end)
-
-	setmetatable(deferred, {
-		__call = function(t, callback, errback)
-			if type(callback) == 'function' then
-				deferred:on('resolved', callback)
-			end
-
-			if type(errback) == 'function' then
-				deferred:on('rejected', errback)
-			end
-		end
-	})
-
-	return deferred
-end
-
-function exports.isPromise(p)
-	return type(p)      == 'table' and
-	       type(p.on)   == 'function' and
-	       type(p.done) == 'boolean'
-end
-
-function exports.reerror(err, level)
+function utils.reerror(err, level)
 	error(err:gsub('^pcall: ', ''), level == 0 and 0 or level + 1)
 end
 
-function exports.reerrorCall(level, fn, ...)
+function utils.reerrorCall(level, fn, ...)
 	local ok, rtn = pcall(fn, ...)
 
 	if not ok then
-		exports.reerror(rtn, level == 0 and 0 or level + 1)
+		utils.reerror(rtn, level == 0 and 0 or level + 1)
 	end
 
 	return rtn
 end
 
-function exports.curry(fn, ...)
+function utils.curry(fn, ...)
 	local args = {...}
 
 	return function(...)
 		return fn(unpack(args), ...)
 	end
+end
+
+function utils.split(str, splitter, pattern)
+	local found = true
+	local last = 0
+	local parts = {}
+
+	-- print(str)
+
+	while found do
+		local match = {str:find(splitter, last, not pattern)}
+
+		-- print(table.concat(match, ', '))
+
+		if #match > 0 then
+			parts[#parts + 1] = str:sub(last, match[1] - 1)
+			last = match[1] + 1
+		else
+			found = false
+		end
+	end
+
+	parts[#parts + 1] = str:sub(last)
+
+	-- print(textutils.serialize(parts))
+
+	return parts
+end
+
+function utils.slice(t, from, to)
+	local res = {}
+
+	for i = from, to do
+		res[#res + 1] = t[i]
+	end
+
+	return res
 end
 
 threads = require('peak-tasks/threads')

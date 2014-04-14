@@ -1,5 +1,5 @@
 local Handle = require('./handle')
-local util   = require('./util')
+local pathUtils   = require('./path-utils')
 
 --[[
 interface FS
@@ -71,7 +71,7 @@ local function FS(t)
 	end
 
 	function t:checkPermission(user, path, op)
-		path = util.normPath(path)
+		path = pathUtils.normPath(path)
 
 		if user == nil then
 			return true
@@ -95,7 +95,7 @@ local function FS(t)
 		-- 	offset = 0
 		-- end
 
-		-- path = util.normPath(path)
+		-- path = pathUtils.normPath(path)
 
 		-- local ok, reason = checkOp(self, user, path, 'w')
 		-- if ok then
@@ -116,7 +116,7 @@ local function FS(t)
 		-- 	offset = 0
 		-- end
 
-		-- path = util.normPath(path)
+		-- path = pathUtils.normPath(path)
 
 		-- local ok, reason = checkOp(self, user, path, 'r')
 		-- if ok then

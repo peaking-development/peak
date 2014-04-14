@@ -1,4 +1,4 @@
-local util = require('./util')
+local pathUtils = require('./path-utils')
 local FS   = require('./fs')
 
 local PathFS = exports
@@ -18,7 +18,7 @@ PathFS.proto = {
 	end;
 
 	_getPath = function(self, origPath)
-		return "/" .. util.joinPath(self.path, origPath:gsub("^/", "") .. '')
+		return "/" .. pathUtils.joinPath(self.path, origPath:gsub("^/", "") .. '')
 	end;
 
 	_checkPermission = function(self, user, path, op)
