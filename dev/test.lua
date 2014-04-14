@@ -35,28 +35,7 @@ function threadsTest1()
 	test.paused = false
 end
 
-function promisesTest1()
-	local deferred = utils.defer()
-
-	deferred(function(res)
-		print('Result: ' .. res)
-	end)
-
-	-- Won't work because then is a keyword in Lua
-	-- deferred.then(function(res)
-	-- 	print('Result: ' .. res)
-	-- end)
-
-	deferred:on('resolved', function(res)
-		print('Result: ' .. res)
-	end)
-
-	deferred:resolve('stuff')
-	deferred:resolve('this should not be printed')
-end
-
 threadsTest1()
-promisesTest1()
 
 -- local timeout = 0.5
 -- local timeoutTimer = os.startTimer(timeout)
