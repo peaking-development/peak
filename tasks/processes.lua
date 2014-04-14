@@ -24,11 +24,11 @@ exports.type[2] = exports.type
 -- Create a new process
 function exports.newBase(parent, pid, title)
 	local self = utils.eventEmitter({
-		type    = exports.type,
-		id      = pid,
-		parent  = parent,
-		title   = title,
-		threads = {}
+		type    = exports.type;
+		id      = pid;
+		parent  = parent;
+		title   = title;
+		threads = {};
 	})
 
 	function self:queue(ev, ...)
@@ -55,10 +55,10 @@ function exports.namespaceBase()
 	local self
 
 	local internal = {
-		processes = {},
-		lastPid   = 1,
-		pids      = {},
-		children  = {}
+		processes = {};
+		lastPid   = 1;
+		pids      = {};
+		children  = {};
 	}
 
 	function internal.importProcess(pid, process)
@@ -81,7 +81,7 @@ function exports.namespaceBase()
 	end
 
 	self = utils.eventEmitter({
-		maxPid = 4096
+		maxPid = 4096;
 	})
 
 	function self:registerChild(ns)
