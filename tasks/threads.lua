@@ -91,10 +91,6 @@ function exports.new(process, fn, ...)
 		current = self
 		local rtn = exports.runInThread(self, coroutine.resume, self.coroutine, ...)
 		current = prev
-
-		if utils.isPromise(rtn) then
-			self.promise = rtn
-		end
 	end
 
 	-- Maybe this should return how many iterations it got through
@@ -103,14 +99,8 @@ function exports.new(process, fn, ...)
 
 		if type(self.coroutine) ~= 'thread' then return false end
 
-		if self.promise ~= nil and self.promise.done then
-			runCoroutine(unpack(self.promise.result))
-			self.promise = nil
-		end
-
 		for i = 1, iters do
 			if #self.eventQueue == 0 then return false end
-			if self.promise ~= nil then break end
 			runCoroutine(unpack(table.remove(self.eventQueue)))
 		end
 	end
@@ -137,7 +127,6 @@ end
 --[[opts = {
 	process   = default: share, new: creates a new process, share: just associates with the existing process;
 	namespace = only relevant with process = new, default: share, new: create a new namespace, share: use the existing namespace;
-	args      = default: new, clone: clone the argument list (doesn't clone each argument), share: keep the same argument list, new: create a new argument list;
 	files     = default: new, share: share the file descriptor table (and all file descriptors in it), new: create a new table;
 	fs        = default: clone, clone: copy the fs info over, share: use the same fs info (means that chdir will affect them both);
 	env       = default: clone, clone: copy the environment over, share: use the same environment;
@@ -157,15 +146,7 @@ function exports.clone(parent, opts, fn, ...)
 			namespace = namespace:registerChild(processes.namespace())
 		end
 
-		process = namespace:new(pproc, pproc.title, unpack((function(opt)
-			if opt == 'clone' then
-				return utils.cloneArr(pproc.args)
-			elseif opt == 'share' then
-				return pproc.args
-			else -- if opt == 'new' then
-				return {}
-			end
-		end)(opts.args)))
+		process = namespace:new(pproc, pproc.title)
 	end
 
 	local thread = exports.new(process, fn, ...)

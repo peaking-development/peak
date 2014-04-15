@@ -12,8 +12,7 @@ local utils   = require('peak-utils')
 	queue(ev, ...) = queue and event to all the threads;
 }]]
 
-exports.type    = {'PROCESS'}
-exports.type[2] = exports.type
+exports.type = module.filename .. ':process'
 
 -- processes.newBase
 -- Create a new process
@@ -48,6 +47,7 @@ end
 -- The difference between this and processes.namespace() is this also returns the internal data
 function exports.namespaceBase()
 	local self = utils.eventEmitter({
+		type = module.filename .. ':namespace';
 		maxPid = 4096;
 	})
 
@@ -102,9 +102,9 @@ function exports.namespaceBase()
 		return procs
 	end
 
-	function self:new(parent, title, ...)
+	function self:new(parent, title)
 		local pid     = internal.generatePid()
-		local process = exports.newBase(parent or self.process, pid, title, ...)
+		local process = exports.newBase(parent or self.process, pid, title)
 
 		internal.processes[pid] = process
 		internal.pids[process]  = pid
@@ -129,6 +129,8 @@ end
 -- Other ones have to be in children
 function exports.kernelNamespace(kernel)
 	local namespace, internal = exports.namespaceBase()
+
+	namespace.type = module.filename .. ':kernelNamespace'
 
 	kernel.id             = 1
 	kernel.namespace      = namespace

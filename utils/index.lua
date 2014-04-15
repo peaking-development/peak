@@ -4,7 +4,6 @@ local threads
 
 function utils.eventEmitter(t, debug)
 	local events = {}
-	local queues = {}
 	local lastEvent
 
 	local function callHandler(handler, ...)
@@ -27,12 +26,8 @@ function utils.eventEmitter(t, debug)
 
 		if type(events[ev]) == 'table' then
 			local handlers = events[ev]
-			if #handlers == 2 and type(handlers[2]) == 'function' then
-				callHandler(handlers, ...)
-			else
-				for i, handler in ipairs(handlers) do
-					callHandler(handler, ...)
-				end
+			for i, handler in ipairs(handlers) do
+				callHandler(handler, ...)
 			end
 		elseif debug then
 			print('Unhandled event: ' .. ev)
@@ -51,21 +46,19 @@ function utils.eventEmitter(t, debug)
 
 		if type(handler) ~= 'function' then error('Attempt to register non-function as event handler', 2) end
 
-		self:emit('newListener', ev, handler)
+		handler = {threads.current(), handler}
+
+		self:emit('newListener', ev, function(...)
+			callHandler(handler, ...)
+		end)
 
 		local handlers = events[ev]
 		if handlers == nil then
-			events[ev] = handler
-		elseif type(handlers) == 'table' then
-			if type(handlers[2] == 'function') then
-				events[ev] = {handlers, handler}
-			else
-				handlers[#handlers + 1] = handler
-			end
-		else
-			print('what is going on here? ', type(handlers))
-			print('someone messed with the events table')
+			handlers = {}
+			events[ev] = handlers
 		end
+
+		handlers[#handlers + 1] = handler
 
 		return t
 	end
