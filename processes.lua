@@ -18,11 +18,25 @@ return function(kernel)
 			path = opts.path;
 			args = opts.args;
 			eventQueue = {};
+			fds = {};
 		}
-		self[opts.pid] = proc
-		local handle = kernel.fs.get(proc.path).open('r')
-		local ok, err = load(handle.read, fn(proc.path, fn.arr.join('/')))
+		local inode = kernel.fs.get(proc.path)
+		local handle = inode.open('r')
+		local fn, err = loadstring(handle.read('*a'), fn(proc.path, fn.arr.join('/')))
+		if fn then
+			--setfenv(fn, {}) -- TODO: this is temporarily disabled
+			proc.co = coroutine.create(fn)
+			local ok, err = coroutine.resume(proc.co)
+			if not ok then
+				error(err, 2)
+			end
+		else
+			error(err, 2)
+		end
 		handle.close()
+		inode.release()
+		self[opts.pid] = proc
+		return proc
 	end
 
 	return self

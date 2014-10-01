@@ -28,9 +28,46 @@ return function(cfs)
 							path = path;
 							offset = 0;
 						}
-						local ch = cfs.
+						local content = ''
+						local ch = cfs.open(fn(path, fn.arr.join('/')), mode)
 
+						function handle.read(length)
+							length = (type(length) == 'string' or type(length) == 'number') and length or '*l'
+							local remaining = content:sub(handle.offset)
 
+							if length == '*l' then
+								while remaining:find('\n', 1, true) == nil do
+									local data = ch.readLine()
+									if #data == 0 then
+										break
+									end
+									content = content .. data .. '\n'
+									remaining = content:sub(handle.offset)
+									--print(remaining, ', ', content, ', ', handle.offset)
+								end
+
+								local nl = remaining:find('\n', 1, true)
+
+								if nl then
+									return remaining:sub(1, nl - 1)
+								else
+									return remaining
+								end
+							elseif length == '*a' then
+								return remaining .. ch.readAll()
+							elseif type(length) == 'number' then
+								while #remaining < length do
+									content = content .. ch.readLine()
+									remaining = content:sub(handle.offset)
+								end
+
+								return remaining:sub(1, length)
+							end
+						end
+
+						function handle.close()
+							ch.close()
+						end
 
 						return handle
 					end
@@ -51,6 +88,8 @@ return function(cfs)
 						end
 					end
 				end
+
+				function inode.release() end
 			end
 			regen()
 			return inode
