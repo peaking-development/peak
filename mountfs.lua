@@ -48,7 +48,6 @@ return function(mounts)
 					local inode
 					for _, mount in ipairs(mounts) do
 						inode = mount.get(subPath)
-						print(subPathStr, inode.exists)
 						if inode.exists then
 							if #subPath == 0 then
 								function inode.delete()
