@@ -1,12 +1,14 @@
---[=====[Rack by CoderPuppy]=====]
+--[=====[Racks by CoderPuppy]=====]
 -- Device Manager
 
 local utils = require('peak-utils')
 
+local racks = exports
+
 -- racks.new(id, dtype)
 -- Creates a new device
 -- You need to implement callMethod and listMethods or wrap
-function exports.new(id, dtype)
+function racks.new(id, dtype)
 	local self = {
 		id             = id,
 		type           = dtype,
@@ -41,8 +43,8 @@ function exports.new(id, dtype)
 	return self
 end
 
-function exports.wrap(id)
-	local self = exports.new(id, peripheral.getType(id))
+function racks.wrap(id)
+	local self = racks.new('hardware:' .. id, 'cc:' .. peripheral.getType(id))
 
 	self.connectionType = 'hardware'
 
@@ -52,13 +54,26 @@ function exports.wrap(id)
 	return self
 end
 
-function exports.isDevice(dev)
+function racks.isDevice(dev)
 	return type(dev)      == 'table'
 	   and type(dev.id)   == 'string'
 	   and type(dev.type) == 'string'
 end
 
-setmetatable(exports, { __call = function(t, opts, queue)
+function racks.filter(dev, ...)
+	local args = {...}
+
+	for i = 1, #args do
+		local arg = args[i]
+
+		if not utils.filterProp(arg, 'id',   dev.id  ) then return false end
+		if not utils.filterProp(arg, 'type', dev.type) then return false end
+	end
+
+	return true
+end
+
+setmetatable(racks, { __call = function(t, opts, queue)
 	local self = utils.eventEmitter({
 		table = {}
 	})
@@ -75,26 +90,13 @@ setmetatable(exports, { __call = function(t, opts, queue)
 	end
 
 	function self:unregister(id)
-		queue('rack:unregister', id)
+		self:emit('unregister', id, self.table[id])
 		self.table[id] = nil
-	end
-
-	function self:filter(dev, ...)
-		local args = {...}
-
-		for i = 1, #args do
-			local arg = args[i]
-
-			if not utils.filterProp(arg, 'id', dev.id) then return false end
-			if not utils.filterProp(arg, 'type', dev.type) then return false end
-		end
-
-		return true
 	end
 
 	function self:first(...)
 		for k, dev in pairs(self.table) do
-			if self.filter(dev, ...) then
+			if racks.filter(dev, ...) then
 				return dev
 			end
 		end
@@ -104,7 +106,7 @@ setmetatable(exports, { __call = function(t, opts, queue)
 		local all = {}
 
 		for k, dev in pairs(self.table) do
-			if self.filter(dev, ...) then
+			if racks.filter(dev, ...) then
 				all[#all + 1] = dev
 			end
 		end
@@ -116,13 +118,13 @@ setmetatable(exports, { __call = function(t, opts, queue)
 		local names = peripheral.getNames()
 
 		for i = 1, #names do
-			self:register(exports.wrap(names[i]))
+			self:register(racks.wrap(names[i]))
 		end
 	end
 
 	function self:newDeviceHandler(ev, side)
 		if ev == 'peripheral' then
-			self:register(exports.wrap(side))
+			self:register(racks.wrap(side))
 		end
 	end
 
