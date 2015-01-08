@@ -216,14 +216,20 @@ function kernel.boot(path)
 	kernel.status = 'on'
 	spawn {
 		code = function()
-			local ok, _, time = coroutine.yield('wait', coroutine.yield('time'))
-			if ok then
-				coroutine.yield('wait', coroutine.yield('timer', time + 2))
-				print('hi')
-				return 0
-			else
-				return 1
+			local function sleep(time)
+				local ok, _, cur = coroutine.yield('wait', coroutine.yield('time'))
+				if ok then
+					coroutine.yield('wait', coroutine.yield('timer', cur + time))
+				else
+					error(_)
+				end
 			end
+			print('sleeping')
+			-- sleep(1)
+			-- print('more sleeping')
+			-- sleep(1)
+			sleep(2)
+			print('hi')
 		end
 	}
 end
