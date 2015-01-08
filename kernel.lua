@@ -258,6 +258,10 @@ function kernel.tick(t)
 		end
 	end
 
+	if processes[0].status == 'finished' then
+		kernel.status = 'off'
+	end
+
 	if ready.any then
 		return 0
 	else
