@@ -1,7 +1,4 @@
-local fn = require 'fn'
-fn.arr = require 'fn-arr'
-
-local Promise; Promise = fn.more(function(self, first, ...)
+local Promise; Promise = setmetatable({}, {__call = function(self, first, ...)
 	local filters = {...}
 
 	local start
@@ -11,10 +8,11 @@ local Promise; Promise = fn.more(function(self, first, ...)
 			return first
 		end
 	else
-		function start(first)
-			return fn.arr.reduce(function(promise, filter)
-				return filter(promise)
-			end, first)(filters)
+		function start(promise)
+			for _, filter in ipairs(filters) do
+				promise = filter(promise)
+			end
+			return promise
 		end
 	end
 
@@ -25,7 +23,7 @@ local Promise; Promise = fn.more(function(self, first, ...)
 			return start(first(input))
 		end
 	end
-end)
+end})
 
 local function isCallable(v)
 	if type(v) == 'function' then return true end
