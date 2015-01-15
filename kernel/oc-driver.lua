@@ -18,7 +18,7 @@ return function(opts)
 	do
 		local package = {}
 
-		package.path = "/?.lua;./?.lua"
+		package.path = "/kernel/?.lua;/common/?.lua;./?.lua"
 
 		local loading = {}
 
@@ -135,29 +135,25 @@ return function(opts)
 	end
 	env._G = env
 
-	local fn, err = loadfile(fs.concat(opts.root, 'index.lua'), 'bt', env)
+	local fn, err = loadfile(fs.concat(opts.root, 'kernel/index.lua'), 'bt', env)
 	if not fn then error(err) end
 	local kernel = fn()
 
-	local function boot()
+	local driver = {
+		kernel = kernel;
+		eventHandler = function() end;
+	}
+	function driver.run()
 		kernel.boot()
-	end
-
-	local function run()
 		local time = kernel.tick(curtime())
 		while kernel.status() ~= 'off' do
 			local e
 			e = {event.pull(time)}
 			if #e > 0 then
-				-- print('handle', serialization.serialize(e))
+				driver.eventHandler(table.unpack(e))
 			end
 			time = kernel.tick(curtime())
 		end
 	end
-
-	return {
-		kernel = kernel;
-		boot = boot;
-		run = run;
-	}
+	return driver
 end
