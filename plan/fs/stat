@@ -1,0 +1,8 @@
+stat
+
+never nil
+
+exists: bool
+type = file | folder | api
+size
+owner

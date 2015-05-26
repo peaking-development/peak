@@ -1,5 +1,19 @@
+local function isCallable(v)
+	if type(v) == 'function' then return true end
+	if type(v) ~= 'table' then return false end
+	local mt = getmetatable(v)
+	return mt and isCallable(mt.__call)
+end
+
 local Promise; Promise = setmetatable({}, {__call = function(self, first, ...)
 	local filters = {...}
+
+	if not isCallable(first) then error('first isn\'t callable') end
+	for _, filter in ipairs(filters) do
+		if not isCallable(filter) then
+			error('filter #' .. tostring(_) .. ' isn\'t callable')
+		end
+	end
 
 	local start
 
@@ -25,12 +39,6 @@ local Promise; Promise = setmetatable({}, {__call = function(self, first, ...)
 	end
 end})
 
-local function isCallable(v)
-	if type(v) == 'function' then return true end
-	if type(v) ~= 'table' then return false end
-	local mt = getmetatable(v)
-	return mt and isCallable(mt.__call)
-end
 function Promise.is(promise)
 	return type(promise) == 'table' and isCallable(promise) and type(promise.resolved) == 'boolean'
 end
@@ -46,12 +54,15 @@ function Promise.pending(mapper)
 
 	setmetatable(promise, {__call = function(self, mapper)
 		local promise, resolve = Promise.pending()
+		if not isCallable(mapper) then error('Invalid mapper') end
 		local handler = function(ok, ...)
 			--local ok, res = pcall(mapper, ok, ...)
 			local res = mapper(ok, ...)
 			--if ok then
 				if res then
 					res(resolve)
+				else
+					resolve(false)
 				end
 			--else
 			--	fn.reerror(res, 2, 'promise#() handler')
@@ -86,6 +97,11 @@ function Promise.pending(mapper)
 end
 
 function Promise.resolved(ok, ...)
+	if not ok then
+		print(...)
+		print(debug.traceback())
+		error('', 0)
+	end
 	local promise, resolve = Promise.pending()
 	resolve(ok, ...)
 	return promise
@@ -216,7 +232,8 @@ function Promise.catch(mapper)
 end
 
 function Promise.orError()
-	return Promise.flatCatch(function(err)
+	return Promise.flatCatch(function(err, ...)
+		print(...)
 		error(err, 0)
 	end)
 end
