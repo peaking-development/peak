@@ -1,11 +1,11 @@
-return function(getChunk, parse)
+return function(getChunk)
 	local buffer = ''
 	local done = false
 	local function expandBuffer(len)
 		if #buffer >= len then return true end
 		if done then error('No more data') end
 		while not done and #buffer < len do
-			local chunk = getChunk()
+			local chunk = getChunk(len - #buffer)
 			if chunk == nil then
 				done = true
 			else
@@ -14,7 +14,7 @@ return function(getChunk, parse)
 		end
 		return #buffer >= len
 	end
-	return parse(function(len)
+	return function(len)
 		if type(len) == 'number' then
 			if not expandBuffer(len) then error('Not enough data') end
 			local ret = buffer:sub(1, len)
@@ -39,5 +39,5 @@ return function(getChunk, parse)
 			buffer = buffer:sub(len + 1)
 			return ret
 		end
-	end)
+	end
 end

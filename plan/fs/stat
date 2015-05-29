@@ -3,6 +3,12 @@ stat
 never nil
 
 exists: bool
-type = file | folder | api
-size
-owner
+type = 'file' | 'folder' | 'api'
+size: int
+perms = {
+	group ::= nil | '*a' | id
+	read: group
+	write: group
+	execute: group
+	owner: group -- change perms
+}

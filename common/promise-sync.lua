@@ -1,4 +1,5 @@
 local Promise = require 'common/promise'
+local lon = require 'common/lon'
 
 local function sync(co, ...)
 	if type(co) ~= 'thread' then
@@ -21,7 +22,7 @@ local function sync(co, ...)
 				end)
 			end
 		else
-			resolve(false, table.unpack(res))
+			resolve(false, type(res[1]) == 'table' and table.unpack(res[1]) or res[1])
 		end
 	end
 	run(...)
@@ -30,11 +31,14 @@ local function sync(co, ...)
 end
 
 local function wait(prom)
+	if not Promise.is(prom) then
+		print(debug.traceback())
+	end
 	local res = {coroutine.yield(prom)}
 	if res[1] then
 		return table.unpack(res, 2)
 	else
-		error(table.concat({table.unpack(res, 2)}, ' - '))
+		error({table.unpack(res, 2)})
 	end
 end
 

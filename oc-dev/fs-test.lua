@@ -9,11 +9,7 @@ function _G.I(...)
 	return ...
 end
 
-for file in pairs(package.loaded) do
-	if file:sub(1, 7) == 'kernel/' or file:sub(1, 7) == 'common/' then
-		package.loaded[file] = nil
-	end
-end
+dofile 'dev/reload.lua'
 
 local Promise = require 'common/promise'
 local sync = require 'common/promise-sync'

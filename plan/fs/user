@@ -1,0 +1,3 @@
+id = hash(auth)
+auth
+groups: [group:id]

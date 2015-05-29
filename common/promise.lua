@@ -1,3 +1,5 @@
+local lon = require 'common/lon'
+
 local function isCallable(v)
 	if type(v) == 'function' then return true end
 	if type(v) ~= 'table' then return false end
@@ -55,7 +57,7 @@ function Promise.pending(mapper)
 	setmetatable(promise, {__call = function(self, mapper)
 		local promise, resolve = Promise.pending()
 		if not isCallable(mapper) then error('Invalid mapper') end
-		local handler = function(ok, ...)
+		local function handler(ok, ...)
 			--local ok, res = pcall(mapper, ok, ...)
 			local res = mapper(ok, ...)
 			--if ok then
@@ -98,7 +100,7 @@ end
 
 function Promise.resolved(ok, ...)
 	if not ok then
-		print(...)
+		print(lon.to({...}))
 		print(debug.traceback())
 		error('', 0)
 	end
@@ -233,7 +235,8 @@ end
 
 function Promise.orError()
 	return Promise.flatCatch(function(err, ...)
-		print(...)
+		print(lon.to({err, ...}))
+		print(debug.traceback())
 		error(err, 0)
 	end)
 end

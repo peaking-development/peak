@@ -37,17 +37,6 @@ return function(fs)
 						end
 
 						function h.seek(whence, offset)
-							if whence == nil then
-								whence = 'cur'
-								offset = 0
-							end
-							if type(whence) == 'number' then
-								offset = whence
-								whence = 'cur'
-							end
-							if offset == nil then
-								offset = 0
-							end
 							rh:seek(whence, offset)
 						end
 					elseif opts.mode == 'write' then

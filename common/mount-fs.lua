@@ -30,7 +30,7 @@ return function()
 		out[#out + 1] = curr
 		return out
 	end
-	local function findFSs(path, write)
+	local function findFSs(path, create)
 		local points = findPath(path)
 		local fss = {}
 		for i, point in ipairs(points) do
@@ -42,8 +42,8 @@ return function()
 			-- sort by distance to final location (lower is better (which means higher distance in is better))
 			if a[3] ~= b[3] then return a[3] > b[3] end
 			-- sort by priority (higher is better)
-			local a_pr = a[write and 6 or 5]
-			local b_pr = b[write and 6 or 5]
+			local a_pr = a[create and 6 or 5]
+			local b_pr = b[create and 6 or 5]
 			if a_pr ~= b_pr then return a_pr > b_pr end
 			-- sort by insertion order (lower is better)
 			if a[4] < b[4] then return true end
@@ -55,8 +55,26 @@ return function()
 		end
 		return out
 	end
-	local function find(path)
-		local points = findPath(path)
+	local function findValidFS(path, perm, create)
+		-- print('----')
+		-- print(FS.serialize_path(path))
+		local fss = findFSs(path, create)
+		for _, mount in ipairs(fss) do
+			local fs, path = mount[1], mount[2]
+			-- print('trying', fs)
+			local stat = wait(fs(path, 'stat'))
+			-- print(stat.exists, stat.type)
+			-- TODO: chack perms
+			if stat.exists then
+				if #path == 0 then
+					stat.mount = true
+				end
+				return {fs, path, stat}
+			end
+		end
+	end
+	local function find(path, create)
+		local points = findPath(path, create)
 		return points[#points]
 	end
 
@@ -65,26 +83,40 @@ return function()
 		return sync(coroutine.create(function()
 			return (({
 				stat = function()
-					local fss = findFSs(path, false)
-					for _, mount in ipairs(fss) do
-						local fs, path = mount[1], mount[2]
-						local stat = wait(fs(path, 'stat'))
-						if stat.exists then
-							if #path == 0 then
-								stat.mount = true
-							end
-							return stat
-						end
+					local res = findValidFS(path, 'read')
+					if res then
+						return res[3]
+					else
+						return { exists = false; }
+					end
+				end;
+
+				open = function(opts)
+					local res = findValidFS(path, opts.mode)
+					if res then
+						return wait(res[1](res[2], 'open', opts))
+					else
+						error({ E.nonexistent, path })
+					end
+				end;
+
+				create = function(opts)
+					local res = findValidFS({table.unpack(path, 1, #path - 1)}, 'write', true)
+					if res then
+						return wait(res[1]({table.unpack(res[2]), path[#path]}, 'create', opts))
+					else
+						error({E.nonexistent, path})
 					end
 				end;
 			})[op] or error('unhandled operation: ' .. tostring(op)))(table.unpack(args))
 		end))
 	end)
 
-	function fs.mount(path, fs, rd_pr, wr_pr)
+	function fs.mount(path, fs, rd_pr, cr_pr)
 		if type(rd_pr) ~= 'number' then rd_pr = 0 end
-		if type(wr_pr) ~= 'number' then wr_pr = 0 end
-		find(path).mounts[fs] = {insertion_order, rd_pr, wr_pr}
+		if type(cr_pr) ~= 'number' then cr_pr = 0 end
+		print('mounting', fs, FS.serialize_path(path))
+		find(path).mounts[fs] = {insertion_order, rd_pr, cr_pr}
 		insertion_order = insertion_order + 1
 	end
 	function fs.unmount(path, fs)

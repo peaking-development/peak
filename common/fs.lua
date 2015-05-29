@@ -1,5 +1,9 @@
 local Promise = require 'common/promise'
+local sync = require 'common/promise-sync'
+local wait = sync.wait
+local Lock = require 'common/lock'
 local E = require 'common/error'
+local xtend = require 'common/xtend'
 
 local FS; FS = {
 	validate_type = function(typ)
@@ -15,48 +19,32 @@ setmetatable(FS, { __call = function(self, fs)
 		end
 		return (({
 			open = function(opts)
-				return Promise(
-					rfs(path, 'stat'),
-					Promise.flatCatch(function(err, ...)
-						if err == E.nonexistent and opts.create then
+				return sync(coroutine.create(function()
+					local stat = wait(rfs(path, 'stat'))
+					if not stat.exists and opts.create then
 							if not FS.validate_type(opts.type) then return Promise.resolved(false, E.invalid_type) end
 
-							return Promise(
-								rfs(path, 'create', {
-									type = opts.type;
-								}),
-								Promise.flatMap(function()
-									return rfs(path, 'stat')
-								end)
-							)
-						else
-							return Promise.resolved(false, err, ...)
-						end
-					end),
-					Promise.flatMap(function(stat)
-						local realOpts = {}
-						if not realOpts.type then realOpts.type = stat.type end
-						if stat.type ~= realOpts.type then return Promise.resolved(false, E.wrong_type) end
-						if stat.type == 'file' or stat.type == 'stream' then
-							if not FS.validate_mode(realOpts.type, opts.mode) then return Promise.resolved(false, E.invalid_mode) end
-							realOpts.mode = opts.mode
-							if realOpts.mode == 'write' and opts.append == true then realOpts.append = true end
-						end
+							wait(rfs(path, 'create', xtend(type(opts.create) == 'table' and opts.create or {}, {
+								type = opts.type;
+							})))
+							stat = wait(rfs(path, 'stat'))
+					end
 
-						if stat.exists then
-							return Promise(
-								fs(path, 'open', realOpts),
-								Promise.map(function(h)
-									h.type = stat.type
-									h.opts = realOpts
-									return h
-								end)
-							)
-						else
-							return Promise.resolved(false, E.nonexistent, 'fs')
-						end
-					end)
-				)
+					local realOpts = {}
+					if not realOpts.type then realOpts.type = stat.type end
+					if stat.type ~= realOpts.type then return Promise.resolved(false, E.wrong_type) end
+					if opts.write then realOpts.write = true end
+					if opts.clear then realOpts.clear = true end
+
+					if stat.exists then
+						local h = FS.wrap_handle(wait(fs(path, 'open', realOpts)))
+						h.type = stat.type
+						h.opts = realOpts
+						return h
+					else
+						error({E.nonexistent, 'fs'})
+					end
+				end))
 			end;
 
 			stat = function()
@@ -132,6 +120,169 @@ function FS.unserialize_path(path)
 	end
 	out[#out + 1] = tmp
 	return out
+end
+
+function FS.wrap_stream(_pull)
+	local buffer = ''
+	local done = false
+	local function pull(len)
+		if len then
+			while not done and #buffer < len do
+				pull()
+			end
+		else
+			if done then return end
+			local res = wait(_pull())
+			if res then
+				buffer = buffer .. res
+			else
+				done = true
+			end
+		end
+	end
+	return function(len)
+		return sync(coroutine.create(function()
+			if done and #buffer == 0 then return end
+			local res
+			if len == math.huge then
+				pull(math.huge)
+				res = buffer
+				buffer = ''
+			elseif len == 'line' then
+				while not done and not buffer:find('[\n\r]') do
+					pull()
+				end
+				local index = buffer:find('[\n\r]')
+				local m = buffer:match('[\n\r]*')
+				if index then
+					local l
+					if m:sub(0, 2) == '\r\n' then
+						l = 2
+					else
+						l = 1
+					end
+					res = buffer:sub(0, index - 1)
+					buffer = buffer:sub(index + l)
+				else
+					res = buffer
+					buffer = ''
+				end
+			elseif type(len) == 'number' and len > 0 then
+				pull(len)
+				res = buffer:sub(0, len + 1)
+				buffer = buffer:sub(len)
+			else
+				pull()
+				res = buffer
+				buffer = ''
+			end
+			return res
+		end))
+	end
+end
+
+function FS.wrap_buffer(_pull)
+	local buffer = ''
+	local pos = 1
+	local done = false
+	local h = {}
+	local function pull(len)
+		if len then
+			while not done and #buffer < len do
+				pull()
+			end
+		else
+			if done then return end
+			local res = wait(_pull())
+			if res then
+				buffer = buffer .. res
+			else
+				done = true
+			end
+		end
+	end
+	local function read(len)
+		if #buffer < pos + len then
+			pull(pos + len)
+		end
+		local res = buffer:sub(pos, pos + len - 1)
+		pos = pos + len
+		if pos > #buffer then pos = #buffer end
+		return res
+	end
+	function h.read(len)
+		return sync(coroutine.create(function()
+			local res
+			if len == math.huge then
+				pull(math.huge)
+				res = buffer:sub(pos)
+				pos = #buffer
+			elseif len == 'line' then
+				local index = buffer:find('[\n\r]', pos)
+				local m = buffer:match('[\n\r]*', pos)
+				while not done and not index do
+					pull()
+					index = buffer:find('[\n\r]', pos)
+					m = buffer:match('[\n\r]*', pos)
+				end
+				res = read(index - pos)
+			elseif type(len) == 'number' and len > 0 then
+				res = read(len)
+			else
+				res = read(10)
+			end
+			return res
+		end))
+	end
+	function h.seek(whence, offset)
+		if whence == 'set' then
+			pos = offset + 1
+		elseif whence == 'cur' then
+			pos = pos + offset
+		else
+			error('invalid whence: ' .. tostring(whence))
+		end
+		return Promise.resolved(true, pos - 1)
+	end
+	function h.close()
+		done = true
+		return Promise.resolved(true)
+	end
+	return h
+end
+
+function FS.wrap_handle(h)
+	local rh = {}
+	function rh.read(len)
+		return h.read(len)
+	end
+	function rh.seek(whence, offset)
+		if whence == nil then
+			whence = 'cur'
+			offset = 0
+		end
+		if type(whence) == 'number' then
+			offset = whence
+			whence = 'cur'
+		end
+		if offset == nil then
+			offset = 0
+		end
+		return h.seek(whence, offset)
+	end
+	function rh.close()
+		return h.close()
+	end
+	if h.write then
+		function rh.write(data)
+			return h.write(data)
+		end
+
+		function rh.flush()
+			return h.flush()
+		end
+	end
+	return rh
 end
 
 return FS

@@ -1,0 +1,8 @@
+open({
+	type: type
+	mode: {
+		write: bool
+		binary: bool
+	}
+	create: create?
+})
