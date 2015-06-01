@@ -24,32 +24,44 @@ return function(fs)
 				local h = {}
 
 				if opts.type == 'file' then
-					local rh
-					if opts.mode == 'read' then
-						local mode = 'r' .. (opts.binary and 'b' or '')
-						rh = buffer.new(mode, fs.open(path, mode))
+					local wh
+					local rh = buffer.new('r', fs.open(path, 'r'))
 
-						function h.read(len)
-							if len == math.huge then len = '*a' end
-							if len == nil then len = '*L' end
-							if len == 'line' then len = '*l' end
-							return Promise.resolved(true, rh:read(len))
-						end
+					function h.read(len)
+						if len == math.huge then len = '*a' end
+						if len == nil then len = '*L' end
+						if len == 'line' then len = '*l' end
+						return Promise.resolved(true, rh:read(len))
+					end
 
-						function h.seek(whence, offset)
-							rh:seek(whence, offset)
+					function h.seek(whence, offset)
+						if wh then
+							wh:seek(whence, offset)
 						end
-					elseif opts.mode == 'write' then
-						rh = fs.open(path, opts.preserve and 'a' or 'w')
+						return Promise.resolved(true, rh:seek(whence, offset))
+					end
+
+					if opts.write then
+						local mode = opts.clear and 'w' or 'a'
+						wh = buffer.new(mode, fs.open(path, mode))
+						wh:seek('set', rh:seek())
 
 						function h.write(data)
-							rh:write(data)
+							wh:write(data)
+							wh:flush()
+							return Promise.resolved(true)
+						end
+
+						function h.flush()
 							return Promise.resolved(true)
 						end
 					end
 
 					function h.close()
 						rh:close()
+						if wh then
+							wh:close()
+						end
 						return Promise.resolved(true)
 					end
 				elseif opts.type == 'folder' then

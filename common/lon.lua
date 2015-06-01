@@ -7,7 +7,7 @@ local function serialize(data)
 		curr = pe[1][pe[2]]
 		if type(pe[2]) == 'number' then
 			if pe[2] > pe[3] + 1 then
-				print(pe[3], pe[2])
+				-- print(pe[3], pe[2])
 				for i = pe[3] + 2, pe[2] do
 					out = out .. 'nil; '
 				end

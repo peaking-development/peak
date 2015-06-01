@@ -100,7 +100,11 @@ end
 
 function Promise.resolved(ok, ...)
 	if not ok then
-		print(lon.to({...}))
+		local data = {...}
+		if type(data[1]) == 'string' then
+			print(table.remove(data, 1))
+		end
+		print(lon.to(data))
 		print(debug.traceback())
 		error('', 0)
 	end
@@ -157,9 +161,7 @@ function Promise.firstResolved(...)
 	local promise, resolve = Promise.pending()
 	for i, promise in ipairs({...}) do
 		promise(function(ok, ...)
-			if not promise.resolved then
-				resolve(true, i, ok, ...)
-			end
+			resolve(true, i, ok, ...)
 		end)
 	end
 	return promise
@@ -195,7 +197,7 @@ function Promise.any(...)
 	)
 end
 
-function Promise.flatMap(mapper, from)
+function Promise.flatMap(mapper)
 	return function(promise)
 		return promise(function(ok, ...)
 			if ok then

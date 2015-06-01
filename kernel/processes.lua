@@ -1,7 +1,7 @@
-local processes = {}
-local lastPID = peak.config.startID
-
-local ready = {}
+local Reg = require 'common/reg'
+local util = require 'common/util'
+local lon = require 'common/lon'
+local processes = require 'common/id-reg' ()
 
 local function get(pid)
 	if not processes[pid] then error('Non-existent process: ' .. tostring(pid)) end
@@ -9,43 +9,79 @@ local function get(pid)
 end
 
 local function addPromise(proc, prom)
-	local pid = proc.lastPID
-	while proc.promises[pid] do
-		if pid == maxID then
-			if looped then
-				error('No available promise id')
-			else
-				pid = startID
-				looped = true
-			end
-		else
-			pid = pid + 1
-		end
+	if not Promise.is(prom) then
+		print(prom)
+		error('not a promise')
 	end
-	if pid == proc.lastPID then
-		proc.lastPID = proc.lastPID + 1
-	end
-
-	proc.promises[pid] = prom
-
-	return pid
+	return proc.promises.register(prom)
 end
 
 local function releasePromise(proc, pid)
 	local prom = proc.promises[pid]
 	if not prom then error('Non-existent promise: ' .. tostring(pid)) end
-	proc.promises[pid] = nil
+	proc.promises.release(pid)
 	if prom.timer then
 		peak.timers.release(prom.timer)
 	end
 end
 
+local tick
+
 local function wait(proc, prom)
+	if proc.waiting then
+		error('already waiting')
+	end
 	proc.waiting = prom
 	prom(function(...)
-		ready[proc.id] = true
-		ready.any = true
+		peak.queue[#peak.queue + 1] = function()
+			tick(proc, prom)
+		end
 	end)
+end
+
+function tick(proc, prom)
+	local args = proc.waiting.res
+	proc.waiting = nil
+	while true do
+		local res = {coroutine.resume(proc.coroutine, table.unpack(args))}
+		local status = coroutine.status(proc.coroutine)
+		local ok = table.remove(res, 1)
+		if ok then
+			if status == 'dead' then
+				proc.status = 'finished'
+				proc.result = res
+				break
+			elseif status == 'suspended' then
+				local name = table.remove(res, 1)
+				if name == 'wait' then
+					local proms = {}
+					for _, prom in ipairs(res) do
+						proms[#proms + 1] = proc.promises[prom]
+					end
+					local prom = Promise.firstResolved(table.unpack(proms))
+					wait(proc, prom)
+					break
+				elseif name == 'release' then
+					releasePromise(proc, res[1])
+					args = {}
+				elseif name == 'continue' then
+					wait(proc, Promise.resolved(true, table.unpack(res)))
+					break
+				else
+					-- print(tostring(proc.id) .. ' calling ' .. tostring(name) .. '(' .. table.concat(util.map(res, lon.to), ', ') .. ')')
+					local prom = (peak.syscalls[name] or
+						error('Unknown syscall ' .. tostring(name) .. ' (called by ' .. tostring(proc.id) .. ')')
+					)(proc, table.unpack(res))
+					args = {select(1, addPromise(proc, prom))}
+				end
+			else
+				error('Unhandled coroutine status: ' .. tostring(status))
+			end
+		else
+			-- TODO: handle this
+			error(res[1])
+		end
+	end
 end
 
 local function spawn(opts)
@@ -61,92 +97,26 @@ local function spawn(opts)
 	if type(opts.code) ~= 'function' then error('No code passed') end
 
 	local pid = type(opts.pid) == 'number' and opts.pid or lastPID
-	do
-		local looped = false
-		while processes[pid] do
-			if pid >= maxID then
-				if looped then
-					error('No available process id')
-				else
-					pid = startID
-					looped = true
-				end
-			else
-				pid = pid + 1
-			end
-		end
-		if pid == lastPID then
-			lastPID = lastPID + 1
-		end
-	end
 
 	local proc = {
-		id = pid;
 		status = 'running';
 
 		coroutine = coroutine.create(opts.code);
 
-		promises = {};
-		lastPID = peak.config.startID;
+		promises = Reg();
+
+		-- FS
+		jail = {};
+		root = {};
+		working_dir = {};
+		handles = Reg();
 	}
-	processes[pid] = proc
+	pid = processes.register(proc, pid)
+	proc.id = pid
 
 	wait(proc, Promise.resolved(true, table.unpack(opts.args)))
 
 	return proc
-end
-
-local function run()
-	local oldReady = ready
-	ready = {}
-	for pid in pairs(oldReady) do
-		if type(pid) == 'number' then
-			local proc = get(pid)
-			local args = {proc.waiting.ok, table.unpack(proc.waiting.res)}
-			proc.waiting = nil
-			while true do
-				local res = {coroutine.resume(proc.coroutine, table.unpack(args))}
-				local status = coroutine.status(proc.coroutine)
-				local ok = table.remove(res, 1)
-				if ok then
-					if status == 'dead' then
-						proc.status = 'finished'
-						proc.result = res
-						break
-					elseif status == 'suspended' then
-						local name = table.remove(res, 1)
-						if name == 'wait' then
-							local proms = {}
-							for _, prom in ipairs(res) do
-								proms[#proms + 1] = proc.promises[prom]
-							end
-							local prom = Promise.first(table.unpack(proms))
-							wait(proc, prom)
-							break
-						elseif name == 'release' then
-							releasePromise(proc, res[1])
-							args = {}
-						elseif name == 'continue' then
-							wait(proc, Promise.resolved(true, table.unpack(res)))
-						else
-							local prom = (peak.syscalls[name] or
-								error('Unknown syscall ' .. tostring(name) .. ' for ' .. tostring(proc.id))
-							)(proc, table.unpack(res))
-							args = {select(1, addPromise(proc, prom))}
-						end
-					else
-						error('Unhandled coroutine status: ' .. tostring(status))
-					end
-				else
-					error(res[1])
-				end
-			end
-		end
-	end
-end
-
-local function anyReady()
-	return ready.any
 end
 
 return {
@@ -155,6 +125,5 @@ return {
 	releasePromise = releasePromise;
 	wait = wait;
 	spawn = spawn;
-	run = run;
-	anyReady = anyReady;
+	tick = tick;
 }

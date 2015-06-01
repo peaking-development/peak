@@ -3,15 +3,12 @@ local function tick(t)
 
 	peak.tick()
 
-	if peak.processes.anyReady() then
-		return 0
-	else
-		return peak.timers.nextTime() - peak.time
-	end
+	return #peak.queue > 0, peak.timers.nextTime() - peak.time
 end
 
 return {
 	boot = peak.boot;
 	tick = tick;
+	fs = peak.fs;
 	status = function() return peak.status end
 }

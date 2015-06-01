@@ -1,17 +1,28 @@
 local Promise = require 'common/promise'
 local lon = require 'common/lon'
 
-local function sync(co, ...)
-	if type(co) ~= 'thread' then
-		return Promise.flatMap(function(...)
-			return sync(coroutine.create(co), ...)
-		end)
-	end
-
+local function sync(fn, ...)
+	local args = table.pack(...)
+	local co = coroutine.create(function()
+		local ok, res = xpcall(fn, function(err)
+			-- if type(err) == 'string' then
+			-- 	return err .. '\n' .. debug.traceback()
+			-- elseif type(err) == 'table' and type(err[1]) == 'string' then
+			-- 	return err[1] .. '\n' .. lon.to({table.unpack(err, 2)}) .. '\n' .. debug.traceback()
+			-- else
+				return err
+			-- end
+		end, table.unpack(args, 1, args.n))
+		if ok then
+			return res
+		else
+			error(res)
+		end
+	end)
 	local promise, resolve = Promise.pending()
 
 	local function run(...)
-		local res = {coroutine.resume(co, ...)}
+		local res = table.pack(coroutine.resume(co, ...))
 		local ok = table.remove(res, 1)
 		if ok then
 			if coroutine.status(co) == 'dead' then
@@ -22,6 +33,8 @@ local function sync(co, ...)
 				end)
 			end
 		else
+			-- print'sync error'
+			-- print(lon.to(res))
 			resolve(false, type(res[1]) == 'table' and table.unpack(res[1]) or res[1])
 		end
 	end
@@ -38,6 +51,9 @@ local function wait(prom)
 	if res[1] then
 		return table.unpack(res, 2)
 	else
+		-- print'wait error'
+		-- print(lon.to(res))
+		-- print(debug.traceback())
 		error({table.unpack(res, 2)})
 	end
 end

@@ -1,5 +1,6 @@
 local FS = require 'common/fs'
 local lon = require 'common/lon'
+local util = require 'common/util'
 local sync = require 'common/promise-sync'
 local wait = sync.wait
 
@@ -22,7 +23,7 @@ return function()
 			if curr.children[part] then
 				curr = curr.children[part]
 			else
-				local new = {path = {unpack(currPath)}; children = {}; mounts = {}; parent = curr;}
+				local new = {path = {table.unpack(currPath)}; children = {}; mounts = {}; parent = curr;}
 				curr.children[part] = new
 				curr = new
 			end
@@ -61,7 +62,7 @@ return function()
 		local fss = findFSs(path, create)
 		for _, mount in ipairs(fss) do
 			local fs, path = mount[1], mount[2]
-			-- print('trying', fs)
+			print('trying', fs, FS.serialize_path(path))
 			local stat = wait(fs(path, 'stat'))
 			-- print(stat.exists, stat.type)
 			-- TODO: chack perms
@@ -80,7 +81,7 @@ return function()
 
 	local fs = FS(function(path, op, ...)
 		local args = {...}
-		return sync(coroutine.create(function()
+		return sync(function()
 			return (({
 				stat = function()
 					local res = findValidFS(path, 'read')
@@ -103,13 +104,13 @@ return function()
 				create = function(opts)
 					local res = findValidFS({table.unpack(path, 1, #path - 1)}, 'write', true)
 					if res then
-						return wait(res[1]({table.unpack(res[2]), path[#path]}, 'create', opts))
+						return wait(res[1](util.concat(res[2], {path[#path]}), 'create', opts))
 					else
 						error({E.nonexistent, path})
 					end
 				end;
 			})[op] or error('unhandled operation: ' .. tostring(op)))(table.unpack(args))
-		end))
+		end)
 	end)
 
 	function fs.mount(path, fs, rd_pr, cr_pr)

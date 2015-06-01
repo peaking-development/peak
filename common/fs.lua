@@ -13,13 +13,14 @@ local FS; FS = {
 
 setmetatable(FS, { __call = function(self, fs)
 	local function rfs(path, op, ...)
+		print(FS.serialize_path(path), op)
 		local args = {...}
 		local function run()
 			return fs(path, op, table.unpack(args))
 		end
 		return (({
 			open = function(opts)
-				return sync(coroutine.create(function()
+				return sync(function()
 					local stat = wait(rfs(path, 'stat'))
 					if not stat.exists and opts.create then
 							if not FS.validate_type(opts.type) then return Promise.resolved(false, E.invalid_type) end
@@ -33,18 +34,23 @@ setmetatable(FS, { __call = function(self, fs)
 					local realOpts = {}
 					if not realOpts.type then realOpts.type = stat.type end
 					if stat.type ~= realOpts.type then return Promise.resolved(false, E.wrong_type) end
-					if opts.write then realOpts.write = true end
-					if opts.clear then realOpts.clear = true end
+					if realOpts.type == 'file' then
+						if opts.write then realOpts.write = true end
+						if opts.clear then realOpts.clear = true end
+					elseif realOpts.type == 'api' then
+						if opts.execute then realOpts.execute = true end
+						if opts.provide then realOpts.provide = true end
+					end
 
 					if stat.exists then
-						local h = FS.wrap_handle(wait(fs(path, 'open', realOpts)))
+						local h = FS.wrap_handle[realOpts.type](wait(fs(path, 'open', realOpts)))
 						h.type = stat.type
 						h.opts = realOpts
 						return h
 					else
 						error({E.nonexistent, 'fs'})
 					end
-				end))
+				end)
 			end;
 
 			stat = function()
@@ -141,7 +147,7 @@ function FS.wrap_stream(_pull)
 		end
 	end
 	return function(len)
-		return sync(coroutine.create(function()
+		return sync(function()
 			if done and #buffer == 0 then return end
 			local res
 			if len == math.huge then
@@ -177,7 +183,7 @@ function FS.wrap_stream(_pull)
 				buffer = ''
 			end
 			return res
-		end))
+		end)
 	end
 end
 
@@ -211,7 +217,7 @@ function FS.wrap_buffer(_pull)
 		return res
 	end
 	function h.read(len)
-		return sync(coroutine.create(function()
+		return sync(function()
 			local res
 			if len == math.huge then
 				pull(math.huge)
@@ -232,7 +238,7 @@ function FS.wrap_buffer(_pull)
 				res = read(10)
 			end
 			return res
-		end))
+		end)
 	end
 	function h.seek(whence, offset)
 		if whence == 'set' then
@@ -251,7 +257,8 @@ function FS.wrap_buffer(_pull)
 	return h
 end
 
-function FS.wrap_handle(h)
+FS.wrap_handle = {}
+function FS.wrap_handle.file(h)
 	local rh = {}
 	function rh.read(len)
 		return h.read(len)
@@ -283,6 +290,34 @@ function FS.wrap_handle(h)
 		end
 	end
 	return rh
+end
+
+function FS.wrap_handle.folder(h)
+	local rh = {}
+	local done = false
+	function rh.read()
+		if done then
+			return Promise.resolved(true, nil)
+		end
+		return Promise(
+			h.read(),
+			Promise.map(function(n)
+				if n == nil then
+					done = true
+				end
+				return n
+			end)
+		)
+	end
+	function rh.close()
+		done = true
+		return Promise.resolved(true)
+	end
+	return rh
+end
+
+function FS.wrap_handle.api(h)
+	return h
 end
 
 return FS

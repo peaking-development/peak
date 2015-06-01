@@ -2,6 +2,7 @@ local serialization = require 'serialization'
 local computer = require 'computer'
 local keyboard = require 'keyboard'
 local event = require 'event'
+local component = require 'component'
 local fs = require 'filesystem'
 
 local function curtime()
@@ -139,20 +140,38 @@ return function(opts)
 	if not fn then error(err) end
 	local kernel = fn()
 
+	kernel.fs.mount({}, require 'common/subfs' (require 'oc/openos-fs' (require 'filesystem'), {'peak-fs'}))
+	kernel.fs.mount({'oc-component-bus'}, require 'oc/component-fs' (component))
+
 	local driver = {
 		kernel = kernel;
-		eventHandler = function() end;
 	}
+	function driver.eventHandler(ev, ...)
+
+	end
 	function driver.run()
+		local rolling = false
+
 		kernel.boot()
-		local time = kernel.tick(curtime())
+		local roll, time = kernel.tick(curtime())
 		while kernel.status() ~= 'off' do
+			if roll and not rolling then
+				computer.pushSignal('peak:oc-driver:tick-event')
+				rolling = true
+			end
 			local e
 			e = {event.pull(time)}
-			if #e > 0 then
+			if #e > 0 and e[1] ~= 'peak:oc-driver:tick-event' then
+				if e[1] == 'key_down' and e[4] == keyboard.keys.c and keyboard.isControlDown() then
+					break
+				end
+				-- print(table.unpack(e))
 				driver.eventHandler(table.unpack(e))
 			end
-			time = kernel.tick(curtime())
+			if e[1] == 'peak:oc-driver:tick-event' then
+				rolling = false
+			end
+			roll, time = kernel.tick(curtime())
 		end
 	end
 	return driver

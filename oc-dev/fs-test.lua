@@ -45,7 +45,7 @@ local util = {
 }
 
 Promise(
-	sync(coroutine.create(function()
+	sync(function()
 		local h = wait(peakFS({'fizbuz'}, 'open', {
 			type = 'file';
 			mode = 'write';
@@ -63,7 +63,7 @@ Promise(
 		term.write(wait(h.read('*a')))
 		wait(h.close())
 		-- util.read_dir,
-	end)),
+	end),
 	Promise.map(I),
 	Promise.orError()
 )
