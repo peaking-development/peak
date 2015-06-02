@@ -16,13 +16,13 @@ local sync = require 'common/promise-sync'
 local wait = sync.wait
 local FS = require 'common/fs'
 
-local peakFS
-peakFS = require 'common/oc-fs' (fs)
-peakFS = require 'common/subfs' (peakFS, {'peak-fs'})
--- peakFS = require('common/enhancment-fs')(peakFS)
+local peak_fs
+peak_fs = require 'common/oc-fs' (fs)
+peak_fs = require 'common/subfs' (peak_fs, {'peak-fs'})
+-- peak_fs = require('common/enhancment-fs')(peak_fs)
 
 local util = {
-	read_dir = Promise.flatMap(function(h)
+	read_dir = Promise.flat_map(function(h)
 		local prom, resolve = Promise.pending()
 		local res = {}
 		local function get()
@@ -46,7 +46,7 @@ local util = {
 
 Promise(
 	sync(function()
-		local h = wait(peakFS({'fizbuz'}, 'open', {
+		local h = wait(peak_fs({'fizbuz'}, 'open', {
 			type = 'file';
 			mode = 'write';
 			create = {
@@ -56,7 +56,7 @@ Promise(
 		wait(h.write('fizbuz\n'))
 		wait(h.close())
 
-		local h = wait(peakFS({'fizbuz'}, 'open', {
+		local h = wait(peak_fs({'fizbuz'}, 'open', {
 			type = 'file';
 			mode = 'read';
 		}))
@@ -65,5 +65,5 @@ Promise(
 		-- util.read_dir,
 	end),
 	Promise.map(I),
-	Promise.orError()
+	Promise.or_error()
 )

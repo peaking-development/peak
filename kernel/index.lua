@@ -46,42 +46,78 @@ function peak.boot()
 					error(_)
 				end
 			end
-			-- local fd = wait(K.open({'oc-component-bus', '23e7e38c-9224-406c-a46e-c5fbae2353df'}, {
-			-- 	type = 'api';
-			-- 	execute = true;
-			-- }))
-			-- wait(K.call(fd, 'bind', '8668c677-17d3-442c-8d68-c789d3f309c9'))
-			-- wait(K.call(fd, 'set', 1, 2, 'heyo'))
-			-- wait(K.close(fd))
-			-- local fd = wait(K.open({'oc-component-bus'}, {
-			-- 	type = 'folder';
-			-- }))
-			-- local res
-			-- repeat
-			-- 	res = wait(K.read(fd))
-			-- 	if res then print(res) end
-			-- until res == nil
-			-- wait(K.close(fd))
-			local fd = wait(K.open({'test-api'}, {
-				type = 'api';
-				create = true;
-				provide = true;
-				execute = true;
-			}))
-			wait(K.provide(fd, 'hello world', 'Say "Hello World!"'))
-			p(wait(K.list(fd)))
-			local call = K.call(fd, 'hello world')
-			local req = table.pack(wait(K.read(fd)))
-			local id = table.remove(req, 1)
-			local name = table.remove(req, 1)
-			if name == 'hello world' then
-				print('Hello World')
-				wait(K.respond(fd, id, true))
-			else
-				print(req[2])
+			-- write to screen
+			if false then
+				local fd = wait(K.open({'oc-component-bus', '23e7e38c-9224-406c-a46e-c5fbae2353df'}, {
+					type = 'api';
+					execute = true;
+				}))
+				wait(K.call(fd, 'bind', '8668c677-17d3-442c-8d68-c789d3f309c9'))
+				wait(K.call(fd, 'set', 1, 2, 'heyo'))
+				wait(K.close(fd))
 			end
-			wait(call)
-			wait(K.close(fd))
+
+			-- list components
+			if false then
+				local fd = wait(K.open({'oc-component-bus'}, {
+					type = 'folder';
+				}))
+				local res
+				repeat
+					res = wait(K.read(fd))
+					if res then print(res) end
+				until res == nil
+				wait(K.close(fd))
+			end
+
+			-- play with api (say hello world)
+			if false then
+				local fd = wait(K.open({'test-api'}, {
+					type = 'api';
+					create = true;
+					provide = true;
+					execute = true;
+				}))
+				wait(K.provide(fd, 'hello world', 'Say "Hello World!"'))
+				p(wait(K.list(fd)))
+				local call = K.call(fd, 'hello world')
+				local req = table.pack(wait(K.read(fd)))
+				local id = req[1]
+				local name = req[2]
+				req = table.pack(table.unpack(req, 2, req.n))
+				if name == 'hello world' then
+					print('Hello World')
+					wait(K.respond(fd, id, true))
+				else
+					print(req[2])
+				end
+				wait(call)
+				wait(K.close(fd))
+			end
+
+			-- play with fuse
+			if true then
+				local fd = wait(K.open({'test-fs-api'}, {
+					type = 'api';
+					create = true;
+					provide = true;
+				}))
+				wait(K.provide(fd, 'stat'))
+				wait(K.mount({'test-fs'}, {'test-fs-api'}, 10))
+				local stat = K.stat({'test-fs'})
+				local req = table.pack(wait(K.read(fd)))
+				local id = req[1]
+				local name = req[2]
+				local path = req[3]
+				req = table.pack(table.unpack(req, 4, req.n))
+				if name == 'stat' then
+					p(path, req)
+					wait(K.respond(fd, id, true, { exists = true; type = 'folder'; }))
+				else
+					wait(K.respond(fd, id, false, 'unknown'))
+				end
+				p(wait(stat))
+			end
 		end
 	}
 end

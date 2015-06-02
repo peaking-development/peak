@@ -45,22 +45,22 @@ setmetatable(FS, { __call = function(self, ...)
 								stat = wait(rfs(path, 'stat'))
 						end
 
-						local realOpts = {}
-						if not realOpts.type then realOpts.type = stat.type end
-						if stat.type ~= realOpts.type then return ret(Promise.resolved(false, E.wrong_type)) end
-						if realOpts.type == 'file' then
-							if opts.write then realOpts.write = true end
-							if opts.clear then realOpts.clear = true end
-						elseif realOpts.type == 'api' then
-							if opts.execute then realOpts.execute = true end
-							if opts.provide then realOpts.provide = true end
+						local real_opts = {}
+						if not real_opts.type then real_opts.type = stat.type end
+						if stat.type ~= real_opts.type then return ret(Promise.resolved(false, E.wrong_type)) end
+						if real_opts.type == 'file' then
+							if opts.write then real_opts.write = true end
+							if opts.clear then real_opts.clear = true end
+						elseif real_opts.type == 'api' then
+							if opts.execute then real_opts.execute = true end
+							if opts.provide then real_opts.provide = true end
 						end
 
 						if stat.exists then
-							local h = wait(fs(path, 'open', realOpts))
-							h = FS.wrap_handle[realOpts.type](h)
+							local h = wait(fs(path, 'open', real_opts))
+							h = FS.wrap_handle[real_opts.type](h)
 							h.type = stat.type
-							h.opts = realOpts
+							h.opts = real_opts
 							return h
 						else
 							error({E.nonexistent, 'fs'})
@@ -74,7 +74,7 @@ setmetatable(FS, { __call = function(self, ...)
 			stat = function()
 				return Promise(
 					fs(path, 'stat'),
-					Promise.flatMap(function(stat)
+					Promise.flat_map(function(stat)
 						if not FS.validate_type(stat.type) then return ret(Promise.resolved(false, E.invalid_type)) end
 						return Promise.resolved(true, stat)
 					end)

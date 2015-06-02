@@ -146,7 +146,7 @@ return function(opts)
 	local driver = {
 		kernel = kernel;
 	}
-	function driver.eventHandler(ev, ...)
+	function driver.event_handler(ev, ...)
 
 	end
 	function driver.run()
@@ -166,7 +166,7 @@ return function(opts)
 					break
 				end
 				-- print(table.unpack(e))
-				driver.eventHandler(table.unpack(e))
+				driver.event_handler(table.unpack(e))
 			end
 			if e[1] == 'peak:oc-driver:tick-event' then
 				rolling = false

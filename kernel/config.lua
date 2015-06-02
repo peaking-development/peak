@@ -1,3 +1,3 @@
 return {
-	bootPath = {'boot', 'init'};
+	boot_path = {'boot', 'init'};
 }

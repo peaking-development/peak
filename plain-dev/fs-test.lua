@@ -23,5 +23,5 @@ Promise(
 		print(wait(h.read()))
 		wait(h.close())
 	end),
-	Promise.orError()
+	Promise.or_error()
 )

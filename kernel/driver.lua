@@ -3,7 +3,7 @@ local function tick(t)
 
 	peak.tick()
 
-	return #peak.queue > 0, peak.timers.nextTime() - peak.time
+	return #peak.queue > 0, peak.timers.next_time() - peak.time
 end
 
 return {

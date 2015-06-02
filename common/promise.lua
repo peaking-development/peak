@@ -1,18 +1,18 @@
 local lon = require 'common/lon'
 
-local function isCallable(v)
+local function is_callable(v)
 	if type(v) == 'function' then return true end
 	if type(v) ~= 'table' then return false end
 	local mt = getmetatable(v)
-	return mt and isCallable(mt.__call)
+	return mt and is_callable(mt.__call)
 end
 
 local Promise; Promise = setmetatable({}, {__call = function(self, first, ...)
 	local filters = {...}
 
-	if not isCallable(first) then error('first isn\'t callable') end
+	if not is_callable(first) then error('first isn\'t callable') end
 	for _, filter in ipairs(filters) do
-		if not isCallable(filter) then
+		if not is_callable(filter) then
 			error('filter #' .. tostring(_) .. ' isn\'t callable')
 		end
 	end
@@ -42,7 +42,7 @@ local Promise; Promise = setmetatable({}, {__call = function(self, first, ...)
 end})
 
 function Promise.is(promise)
-	return type(promise) == 'table' and isCallable(promise) and type(promise.resolved) == 'boolean'
+	return type(promise) == 'table' and is_callable(promise) and type(promise.resolved) == 'boolean'
 end
 
 function Promise.pending(mapper)
@@ -56,7 +56,7 @@ function Promise.pending(mapper)
 
 	setmetatable(promise, {__call = function(self, mapper)
 		local promise, resolve = Promise.pending()
-		if not isCallable(mapper) then error('Invalid mapper') end
+		if not is_callable(mapper) then error('Invalid mapper') end
 		local function handler(ok, ...)
 			--local ok, res = pcall(mapper, ok, ...)
 			local res = mapper(ok, ...)
@@ -113,7 +113,7 @@ function Promise.resolved(ok, ...)
 	return promise
 end
 
-function Promise.allResolved(...)
+function Promise.all_resolved(...)
 	local promise, resolve = Promise.pending()
 	local resolved = 0
 	local results = {}
@@ -130,11 +130,11 @@ function Promise.allResolved(...)
 	return promise
 end
 
--- Like allResolved but requires all to succeed
+-- Like all_resolved but requires all to succeed
 function Promise.all(...)
 	return Promise(
-		Promise.allResolved(...),
-		Promise.flatMap(function(...)
+		Promise.all_resolved(...),
+		Promise.flat_map(function(...)
 			local errored = false
 			local results = {}
 			for i, result in ipairs({...}) do
@@ -157,7 +157,7 @@ function Promise.all(...)
 	)
 end
 
-function Promise.firstResolved(...)
+function Promise.first_resolved(...)
 	local promise, resolve = Promise.pending()
 	for i, promise in ipairs({...}) do
 		promise(function(ok, ...)
@@ -179,9 +179,9 @@ function Promise.first(...)
 	return promise
 end
 
-function Promise.anyResolved(...)
+function Promise.any_resolved(...)
 	return Promise(
-		Promise.firstResolved(...),
+		Promise.first_resolved(...),
 		Promise.map(function(i, ok, ...)
 			return ok, ...
 		end)
@@ -197,7 +197,7 @@ function Promise.any(...)
 	)
 end
 
-function Promise.flatMap(mapper)
+function Promise.flat_map(mapper)
 	return function(promise)
 		return promise(function(ok, ...)
 			if ok then
@@ -210,13 +210,13 @@ function Promise.flatMap(mapper)
 end
 
 function Promise.map(mapper)
-	return Promise.flatMap(function(...)
+	return Promise.flat_map(function(...)
 		--return ret(Promise.resolved(pcall(mapper, ...)))
 		return Promise.resolved(true, mapper(...))
 	end)
 end
 
-function Promise.flatCatch(mapper)
+function Promise.flat_catch(mapper)
 	return function(promise)
 		return promise(function(ok, ...)
 			if ok then
@@ -229,14 +229,14 @@ function Promise.flatCatch(mapper)
 end
 
 function Promise.catch(mapper)
-	return Promise.flatCatch(function(...)
+	return Promise.flat_catch(function(...)
 		--return ret(Promise.resolved(pcall(mapper, ...)))
 		return Promise.resolved(true, mapper(...))
 	end)
 end
 
-function Promise.orError()
-	return Promise.flatCatch(function(err, ...)
+function Promise.or_error()
+	return Promise.flat_catch(function(err, ...)
 		print(lon.to({err, ...}))
 		print(debug.traceback())
 		error(err, 0)

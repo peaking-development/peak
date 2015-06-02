@@ -56,12 +56,12 @@ local driver = dofile(fs.concat(shell.getWorkingDirectory(), 'kernel/oc-driver.l
 	root = shell.getWorkingDirectory();
 })
 
-local peakFs
-peakFs = require('oc/openos-fs')(fs)
-peakFs = require('common/subfs')(peakFs, {'peak-fs'})
--- peakFs = require('enhancment-fs')(peakFs)
+local peak_fs
+peak_fs = require('oc/openos-fs')(fs)
+peak_fs = require('common/subfs')(peak_fs, {'peak-fs'})
+-- peak_fs = require('enhancment-fs')(peak_fs)
 
-function driver.eventHandler(e, ...)
+function driver.event_handler(e, ...)
 	-- print('handle', e, serialization.serialize({...}))
 end
 driver.run()

@@ -14,17 +14,17 @@ return function()
 		path = {};
 	}
 
-	local function findPath(path)
+	local function find_path(path)
 		local out = {}
 		local curr = mounts
-		local currPath = {}
+		local curr_path = {}
 		for _, part in ipairs(path) do
-			currPath[#currPath + 1] = part
+			curr_path[#curr_path + 1] = part
 			out[#out + 1] = curr
 			if curr.children[part] then
 				curr = curr.children[part]
 			else
-				local new = {path = {table.unpack(currPath)}; children = {}; mounts = {}; parent = curr;}
+				local new = {path = {table.unpack(curr_path)}; children = {}; mounts = {}; parent = curr;}
 				curr.children[part] = new
 				curr = new
 			end
@@ -32,8 +32,8 @@ return function()
 		out[#out + 1] = curr
 		return out
 	end
-	local function findFSs(path, create)
-		local points = findPath(path)
+	local function find_fss(path, create)
+		local points = find_path(path)
 		local fss = {}
 		for i, point in ipairs(points) do
 			for fs, data in pairs(point.mounts) do
@@ -57,10 +57,10 @@ return function()
 		end
 		return out
 	end
-	local function findValidFS(path, perm, create)
+	local function find_valid_fs(path, perm, create)
 		-- print('----')
 		-- print(FS.serialize_path(path))
-		local fss = findFSs(path, create)
+		local fss = find_fss(path, create)
 		for _, mount in ipairs(fss) do
 			local fs, path = mount[1], mount[2]
 			print('trying', fs, FS.serialize_path(path))
@@ -76,7 +76,7 @@ return function()
 		end
 	end
 	local function find(path, create)
-		local points = findPath(path, create)
+		local points = find_path(path, create)
 		return points[#points]
 	end
 
@@ -87,7 +87,7 @@ return function()
 		return ret(sync(function()
 			return (({
 				stat = function()
-					local res = findValidFS(path, 'read')
+					local res = find_valid_fs(path, 'read')
 					if res then
 						return res[3]
 					else
@@ -96,7 +96,7 @@ return function()
 				end;
 
 				open = function(opts)
-					local res = findValidFS(path, 'read')
+					local res = find_valid_fs(path, 'read')
 					if res then
 						return ret(wait(res[1](res[2], 'open', opts)))
 					else
@@ -105,7 +105,7 @@ return function()
 				end;
 
 				create = function(opts)
-					local res = findValidFS({table.unpack(path, 1, #path - 1)}, 'write', true)
+					local res = find_valid_fs({table.unpack(path, 1, #path - 1)}, 'write', true)
 					if res then
 						return ret(wait(res[1](util.concat(res[2], {path[#path]}), 'create', opts)))
 					else

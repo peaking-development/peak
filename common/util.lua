@@ -28,7 +28,7 @@ function util.filter(tbl, fn)
 	return res
 end
 
-function util.mapKVs(tbl, fn)
+function util.map_kvs(tbl, fn)
 	local res = {}
 	for k, v in pairs(tbl) do
 		local nk, nv = fn(k, v, tbl)
@@ -37,7 +37,7 @@ function util.mapKVs(tbl, fn)
 	return res
 end
 
-function util.filterKVs(tbl, fn)
+function util.filter_kvs(tbl, fn)
 	local res = {}
 	for k, v in pairs(tbl) do
 		if fn(k, v, tbl) then

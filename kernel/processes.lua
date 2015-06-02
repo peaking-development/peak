@@ -9,7 +9,7 @@ local function get(pid)
 	return processes[pid]
 end
 
-local function addPromise(proc, prom)
+local function add_promise(proc, prom)
 	if not Promise.is(prom) then
 		print(prom)
 		error('not a promise')
@@ -17,7 +17,7 @@ local function addPromise(proc, prom)
 	return proc.promises.register(prom)
 end
 
-local function releasePromise(proc, pid)
+local function release_promise(proc, pid)
 	local prom = proc.promises[pid]
 	if not prom then error('Non-existent promise: ' .. tostring(pid)) end
 	proc.promises.release(pid)
@@ -59,11 +59,11 @@ function tick(proc, prom)
 					for _, prom in ipairs(res) do
 						proms[#proms + 1] = proc.promises[prom]
 					end
-					local prom = Promise.firstResolved(table.unpack(proms))
+					local prom = Promise.first_resolved(table.unpack(proms))
 					wait(proc, prom)
 					break
 				elseif name == 'release' then
-					releasePromise(proc, res[1])
+					release_promise(proc, res[1])
 					args = {}
 				elseif name == 'continue' then
 					wait(proc, Promise.resolved(true, table.unpack(res)))
@@ -73,7 +73,7 @@ function tick(proc, prom)
 					local prom = (peak.syscalls[name] or
 						error('Unknown syscall ' .. tostring(name) .. ' (called by ' .. tostring(proc.id) .. ')')
 					)(proc, table.unpack(res))
-					args = {select(1, addPromise(proc, prom))}
+					args = {select(1, add_promise(proc, prom))}
 				end
 			else
 				error('Unhandled coroutine status: ' .. tostring(status))
@@ -97,7 +97,7 @@ local function spawn(opts)
 	opts.args = type(opts.arg) == 'table' and opts.args or {}
 	if type(opts.code) ~= 'function' then error('No code passed') end
 
-	local pid = type(opts.pid) == 'number' and opts.pid or lastPID
+	local pid = type(opts.pid) == 'number' and opts.pid or last_pid
 
 	local proc = {
 		status = 'running';
@@ -122,8 +122,8 @@ end
 
 return {
 	get = get;
-	addPromise = addPromise;
-	releasePromise = releasePromise;
+	add_promise = add_promise;
+	release_promise = release_promise;
 	wait = wait;
 	spawn = spawn;
 	tick = tick;

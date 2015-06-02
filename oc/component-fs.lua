@@ -2,7 +2,6 @@ local FS = require 'common/fs'
 local Promise = require 'common/promise'
 local lon = require 'common/lon'
 local util = require 'common/util'
-local route = require 'common/fs-route'
 
 return function(component)
 	return FS(function(path, op, ...)

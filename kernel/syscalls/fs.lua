@@ -2,6 +2,8 @@ local Path = require 'common/path'
 local Promise = require 'common/promise'
 local util = require 'common/util'
 local E = require 'common/error'
+local API_FS = require 'common/api-fs'
+local FS = require 'common/fs'
 
 local function expand_path(proc, path, n)
 	n = type(n) == 'number' and n or math.huge
@@ -46,6 +48,13 @@ local syscalls = {
 	chdir = function(proc, path)
 		proc.working_dir = expand_path(proc, path, 1)
 		return proc.working_dir
+	end;
+
+	mount = function(proc, mnt_path, api_path, rd_pr, cr_pr)
+		-- TODO: check if it's an api
+		print('mounting', FS.serialize_path(mnt_path), FS.serialize_path(api_path))
+		peak.fs.mount(expand_path(proc, mnt_path), API_FS(peak.fs, expand_path(proc, api_path)), rd_pr, cr_pr)
+		return Promise.resolved(true)
 	end;
 
 	open = function(proc, path, opts)

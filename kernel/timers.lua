@@ -24,19 +24,19 @@ local function process()
 	end
 end
 
-local function nextTime()
-	local nextTime = math.huge
+local function next_time()
+	local next_time = math.huge
 	for tid, timer in pairs(timers) do
 		if peak.time < timer.time then
-			nextTime = math.min(nextTime, timer.time)
+			next_time = math.min(next_time, timer.time)
 		end
 	end
-	return nextTime
+	return next_time
 end
 
 return {
 	set = set;
 	get = get;
 	process = process;
-	nextTime = nextTime;
+	next_time = next_time;
 }
