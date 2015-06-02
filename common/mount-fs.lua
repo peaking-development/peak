@@ -81,7 +81,7 @@ return function()
 	end
 
 	local fs = FS({
-		open_stat = false;
+		-- open_stat = false;
 	}, function(path, op, ...)
 		local args = {...}
 		return ret(sync(function()
