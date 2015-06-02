@@ -14,7 +14,7 @@ end
 
 return function(opts)
 	local env = setmetatable({
-		serialize = serialization.serialize;
+		serialize = serialize;
 	}, { __index = _G })
 	do
 		local package = {}
@@ -140,7 +140,7 @@ return function(opts)
 	if not fn then error(err) end
 	local kernel = fn()
 
-	kernel.fs.mount({}, require 'common/subfs' (require 'oc/openos-fs' (require 'filesystem'), {'peak-fs'}))
+	kernel.fs.mount({}, require 'common/type-mux-demux-fs' (require 'common/subfs' (require 'oc/openos-fs' (require 'filesystem'), {'peak-fs'})))
 	kernel.fs.mount({'oc-component-bus'}, require 'oc/component-fs' (component))
 
 	local driver = {

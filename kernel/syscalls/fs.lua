@@ -65,7 +65,7 @@ local syscalls = {
 				end)
 			)
 		else
-			return Promise.resolved(false, E.invalid_fd, fd)
+			return ret(Promise.resolved(false, E.invalid_fd, fd))
 		end
 	end;
 
@@ -82,10 +82,10 @@ for _, name in ipairs({'read', 'write', 'seek', 'list', 'call', 'provide', 'unpr
 			if handle[name] then
 				return handle[name](...)
 			else
-				return Promise.resolved(false, E.invalid_call, name, fd)
+				return ret(Promise.resolved(false, E.invalid_call, name, fd))
 			end
 		else
-			return Promise.resolved(false, E.invalid_fd, fd)
+			return ret(Promise.resolved(false, E.invalid_fd, fd))
 		end
 	end
 end

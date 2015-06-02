@@ -152,7 +152,7 @@ function Promise.all(...)
 					results[#results + 1] = res[1]
 				end
 			end
-			return Promise.resolved(not errored, table.unpack(results))
+			return ret(Promise.resolved(not errored, table.unpack(results)))
 		end)
 	)
 end
@@ -203,7 +203,7 @@ function Promise.flatMap(mapper)
 			if ok then
 				return mapper(...)
 			else
-				return Promise.resolved(false, ...)
+				return ret(Promise.resolved(false, ...))
 			end
 		end)
 	end
@@ -211,7 +211,7 @@ end
 
 function Promise.map(mapper)
 	return Promise.flatMap(function(...)
-		--return Promise.resolved(pcall(mapper, ...))
+		--return ret(Promise.resolved(pcall(mapper, ...)))
 		return Promise.resolved(true, mapper(...))
 	end)
 end
@@ -230,7 +230,7 @@ end
 
 function Promise.catch(mapper)
 	return Promise.flatCatch(function(...)
-		--return Promise.resolved(pcall(mapper, ...))
+		--return ret(Promise.resolved(pcall(mapper, ...)))
 		return Promise.resolved(true, mapper(...))
 	end)
 end

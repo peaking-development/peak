@@ -79,7 +79,7 @@ return function()
 
 			create = function(opts)
 				if opts.type ~= 'file' and opts.type ~= 'folder' then
-					return Promise.resolved(false, E.invalid_type, opts.type)
+					return ret(Promise.resolved(false, E.invalid_type, opts.type))
 				end
 				local folder = find({table.unpack(path, 1, #path - 1)}, 'folder')
 				local node = new_node(opts.type)

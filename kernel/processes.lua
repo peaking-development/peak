@@ -1,6 +1,7 @@
 local Reg = require 'common/reg'
 local util = require 'common/util'
 local lon = require 'common/lon'
+local Promise = require 'common/promise'
 local processes = require 'common/id-reg' ()
 
 local function get(pid)

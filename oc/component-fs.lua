@@ -62,7 +62,7 @@ return function(component)
 						if coroutine.status(co) == 'dead' then return Promise.resolved(true, nil) end
 						local ok, res = coroutine.resume(co)
 						if coroutine.status(co) == 'dead' then return Promise.resolved(true, nil) end
-						return Promise.resolved(ok, res)
+						return ret(Promise.resolved(ok, res))
 					end
 					function h.close()
 						return Promise.resolved(true)
@@ -76,9 +76,9 @@ return function(component)
 					if opts.execute then
 						function h.call(name, ...)
 							-- print('calling component ' .. tostring(id) .. '.' .. name .. '(' .. table.concat(util.map({...}, lon.to), ', ') .. ')')
-							return Promise.resolved(xpcall(component.invoke, function(err)
+							return ret(Promise.resolved(xpcall(component.invoke, function(err)
 								return lon.to(err) .. '\n' .. debug.traceback()
-							end, id, name, ...))
+							end, id, name, ...)))
 						end
 					end
 

@@ -3,8 +3,14 @@ local lon = require 'common/lon'
 
 local function sync(fn, ...)
 	local args = table.pack(...)
+	local stack = debug.traceback()
 	local co = coroutine.create(function()
 		local ok, res = xpcall(fn, function(err)
+			-- print(err)
+			print(lon.to(err))
+			print(debug.traceback())
+			print(stack)
+			print(' - ')
 			-- if type(err) == 'string' then
 			-- 	return err .. '\n' .. debug.traceback()
 			-- elseif type(err) == 'table' and type(err[1]) == 'string' then
@@ -47,9 +53,9 @@ local function wait(prom)
 	if not Promise.is(prom) then
 		print(debug.traceback())
 	end
-	local res = {coroutine.yield(prom)}
+	local res = table.pack(coroutine.yield(prom))
 	if res[1] then
-		return table.unpack(res, 2)
+		return table.unpack(res, 2, res.n)
 	else
 		-- print'wait error'
 		-- print(lon.to(res))

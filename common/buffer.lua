@@ -34,10 +34,10 @@ return function(h, data, write)
 		elseif whence == 'cur' then
 			pos = pos + offset
 		else
-			return Promise.resolved(false, 'invalid whence: ' .. tostring(whence))
+			return ret(Promise.resolved(false, 'invalid whence: ' .. tostring(whence)))
 		end
 		if pos > #data() + 1 then
-			return Promise.resolved(false, E.badpos, pos, #data() + 1)
+			return ret(Promise.resolved(false, E.badpos, pos, #data() + 1))
 		end
 		return Promise.resolved(true, pos - 1)
 	end

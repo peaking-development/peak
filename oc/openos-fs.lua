@@ -74,6 +74,8 @@ return function(fs)
 						list = nil
 						return Promise.resolved(true)
 					end
+				else
+					return ret(Promise.resolved(false, 'can\'t use type: ' .. tostring(opts.type)))
 				end
 					
 				return Promise.resolved(true, h)

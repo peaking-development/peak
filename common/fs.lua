@@ -1,7 +1,6 @@
 local Promise = require 'common/promise'
 local sync = require 'common/promise-sync'
 local wait = sync.wait
-local Lock = require 'common/lock'
 local E = require 'common/error'
 local xtend = require 'common/xtend'
 
@@ -11,53 +10,72 @@ local FS; FS = {
 	end;
 }
 
-setmetatable(FS, { __call = function(self, fs)
+setmetatable(FS, { __call = function(self, ...)
+	local fs_opts = {}
+	local fs
+	for i = 1, select('#', ...) do
+		local arg = select(i, ...)
+		if type(arg) == 'table' then
+			fs_opts = xtend(fs_opts, arg)
+		elseif type(arg) == 'function' then
+			fs = arg
+		else
+			error('bad arg: ' .. tostring(arg) .. ' @ ' .. tostring(i))
+		end
+	end
+	if fs_opts.open_stat == nil then fs_opts.open_stat = true end
+	if not fs then error 'no filesystem' end
 	local function rfs(path, op, ...)
-		print(FS.serialize_path(path), op)
+		-- print(FS.serialize_path(path), op)
 		local args = {...}
 		local function run()
 			return fs(path, op, table.unpack(args))
 		end
 		return (({
 			open = function(opts)
-				return sync(function()
-					local stat = wait(rfs(path, 'stat'))
-					if not stat.exists and opts.create then
-							if not FS.validate_type(opts.type) then return Promise.resolved(false, E.invalid_type) end
+				if fs_opts.open_stat then
+					return ret(sync(function()
+						local stat = wait(rfs(path, 'stat'))
+						if not stat.exists and opts.create then
+								if not FS.validate_type(opts.type) then return ret(Promise.resolved(false, E.invalid_type)) end
 
-							wait(rfs(path, 'create', xtend(type(opts.create) == 'table' and opts.create or {}, {
-								type = opts.type;
-							})))
-							stat = wait(rfs(path, 'stat'))
-					end
+								wait(rfs(path, 'create', xtend(type(opts.create) == 'table' and opts.create or {}, {
+									type = opts.type;
+								})))
+								stat = wait(rfs(path, 'stat'))
+						end
 
-					local realOpts = {}
-					if not realOpts.type then realOpts.type = stat.type end
-					if stat.type ~= realOpts.type then return Promise.resolved(false, E.wrong_type) end
-					if realOpts.type == 'file' then
-						if opts.write then realOpts.write = true end
-						if opts.clear then realOpts.clear = true end
-					elseif realOpts.type == 'api' then
-						if opts.execute then realOpts.execute = true end
-						if opts.provide then realOpts.provide = true end
-					end
+						local realOpts = {}
+						if not realOpts.type then realOpts.type = stat.type end
+						if stat.type ~= realOpts.type then return ret(Promise.resolved(false, E.wrong_type)) end
+						if realOpts.type == 'file' then
+							if opts.write then realOpts.write = true end
+							if opts.clear then realOpts.clear = true end
+						elseif realOpts.type == 'api' then
+							if opts.execute then realOpts.execute = true end
+							if opts.provide then realOpts.provide = true end
+						end
 
-					if stat.exists then
-						local h = FS.wrap_handle[realOpts.type](wait(fs(path, 'open', realOpts)))
-						h.type = stat.type
-						h.opts = realOpts
-						return h
-					else
-						error({E.nonexistent, 'fs'})
-					end
-				end)
+						if stat.exists then
+							local h = wait(fs(path, 'open', realOpts))
+							h = FS.wrap_handle[realOpts.type](h)
+							h.type = stat.type
+							h.opts = realOpts
+							return h
+						else
+							error({E.nonexistent, 'fs'})
+						end
+					end))
+				else
+					return fs(path, 'open', opts)
+				end
 			end;
 
 			stat = function()
 				return Promise(
 					fs(path, 'stat'),
 					Promise.flatMap(function(stat)
-						if not FS.validate_type(stat.type) then return Promise.resolved(false, E.invalid_type) end
+						if not FS.validate_type(stat.type) then return ret(Promise.resolved(false, E.invalid_type)) end
 						return Promise.resolved(true, stat)
 					end)
 				)
@@ -66,7 +84,7 @@ setmetatable(FS, { __call = function(self, fs)
 			create = function(opts)
 				return fs(path, 'create', opts)
 			end;
-		})[op] or function() return Promise.resolved(false, 'Unhandled operation: ' .. tostring(op)) end)(...)
+		})[op] or function() return ret(Promise.resolved(false, 'Unhandled operation: ' .. tostring(op))) end)(...)
 	end
 	return setmetatable({}, { __call = function(self, ...) return rfs(...) end })
 end })
@@ -147,7 +165,7 @@ function FS.wrap_stream(_pull)
 		end
 	end
 	return function(len)
-		return sync(function()
+		return ret(sync(function()
 			if done and #buffer == 0 then return end
 			local res
 			if len == math.huge then
@@ -183,7 +201,7 @@ function FS.wrap_stream(_pull)
 				buffer = ''
 			end
 			return res
-		end)
+		end))
 	end
 end
 
@@ -217,7 +235,7 @@ function FS.wrap_buffer(_pull)
 		return res
 	end
 	function h.read(len)
-		return sync(function()
+		return ret(sync(function()
 			local res
 			if len == math.huge then
 				pull(math.huge)
@@ -238,7 +256,7 @@ function FS.wrap_buffer(_pull)
 				res = read(10)
 			end
 			return res
-		end)
+		end))
 	end
 	function h.seek(whence, offset)
 		if whence == 'set' then

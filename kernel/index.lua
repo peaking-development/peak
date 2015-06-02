@@ -1,8 +1,9 @@
+local lon = require 'common/lon'
+
 local peak = {}
 _G.peak = peak
 
 local Promise = require 'promise'
-_G.Promise = Promise
 
 peak.config = require 'config'
 peak.syscalls = require 'syscalls'
@@ -45,13 +46,13 @@ function peak.boot()
 					error(_)
 				end
 			end
-			local fd = wait(K.open({'oc-component-bus', '918d8e46-a5ed-4576-ba38-7814e16be5d8'}, {
-				type = 'api';
-				execute = true;
-			}))
-			wait(K.call(fd, 'bind', '8668c677-17d3-442c-8d68-c789d3f309c9'))
-			wait(K.call(fd, 'set', 1, 2, 'heyo'))
-			wait(K.close(fd))
+			-- local fd = wait(K.open({'oc-component-bus', '23e7e38c-9224-406c-a46e-c5fbae2353df'}, {
+			-- 	type = 'api';
+			-- 	execute = true;
+			-- }))
+			-- wait(K.call(fd, 'bind', '8668c677-17d3-442c-8d68-c789d3f309c9'))
+			-- wait(K.call(fd, 'set', 1, 2, 'heyo'))
+			-- wait(K.close(fd))
 			-- local fd = wait(K.open({'oc-component-bus'}, {
 			-- 	type = 'folder';
 			-- }))
@@ -61,12 +62,26 @@ function peak.boot()
 			-- 	if res then print(res) end
 			-- until res == nil
 			-- wait(K.close(fd))
-			-- local fd = wait(K.open({'test-api'}, {
-			-- 	type = 'api';
-			-- 	create = true;
-			-- 	provide = true;
-			-- }))
-			-- wait(K.close(fd))
+			local fd = wait(K.open({'test-api'}, {
+				type = 'api';
+				create = true;
+				provide = true;
+				execute = true;
+			}))
+			wait(K.provide(fd, 'hello world', 'Say "Hello World!"'))
+			p(wait(K.list(fd)))
+			local call = K.call(fd, 'hello world')
+			local req = table.pack(wait(K.read(fd)))
+			local id = table.remove(req, 1)
+			local name = table.remove(req, 1)
+			if name == 'hello world' then
+				print('Hello World')
+				wait(K.respond(fd, id, true))
+			else
+				print(req[2])
+			end
+			wait(call)
+			wait(K.close(fd))
 		end
 	}
 end

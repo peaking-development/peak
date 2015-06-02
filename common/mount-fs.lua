@@ -1,4 +1,5 @@
 local FS = require 'common/fs'
+local E = require 'common/error'
 local lon = require 'common/lon'
 local util = require 'common/util'
 local sync = require 'common/promise-sync'
@@ -79,9 +80,11 @@ return function()
 		return points[#points]
 	end
 
-	local fs = FS(function(path, op, ...)
+	local fs = FS({
+		open_stat = false;
+	}, function(path, op, ...)
 		local args = {...}
-		return sync(function()
+		return ret(sync(function()
 			return (({
 				stat = function()
 					local res = findValidFS(path, 'read')
@@ -93,9 +96,9 @@ return function()
 				end;
 
 				open = function(opts)
-					local res = findValidFS(path, opts.mode)
+					local res = findValidFS(path, 'read')
 					if res then
-						return wait(res[1](res[2], 'open', opts))
+						return ret(wait(res[1](res[2], 'open', opts)))
 					else
 						error({ E.nonexistent, path })
 					end
@@ -104,13 +107,13 @@ return function()
 				create = function(opts)
 					local res = findValidFS({table.unpack(path, 1, #path - 1)}, 'write', true)
 					if res then
-						return wait(res[1](util.concat(res[2], {path[#path]}), 'create', opts))
+						return ret(wait(res[1](util.concat(res[2], {path[#path]}), 'create', opts)))
 					else
 						error({E.nonexistent, path})
 					end
 				end;
 			})[op] or error('unhandled operation: ' .. tostring(op)))(table.unpack(args))
-		end)
+		end))
 	end)
 
 	function fs.mount(path, fs, rd_pr, cr_pr)

@@ -5,7 +5,7 @@ local wait = sync.wait
 
 return function(wfs)
 	return FS(function(path, op, ...)
-		return sync(function()
+		return ret(sync(function()
 			local stat = wait(wfs(path, 'stat'))
 			local data
 			if stat.exists then
@@ -19,6 +19,6 @@ return function(wfs)
 
 				end;
 			})[op] or error('unhandled operation: ' .. tostring(op)))(...)
-		end)
+		end))
 	end)
 end
