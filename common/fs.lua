@@ -58,7 +58,7 @@ setmetatable(FS, { __call = function(self, ...)
 
 						if stat.exists then
 							local h = wait(fs(path, 'open', real_opts))
-							h = FS.wrap_handle[real_opts.type](h)
+							h = FS.wrap_handle(real_opts.type, h)
 							h.type = stat.type
 							h.opts = real_opts
 							return h
@@ -275,7 +275,13 @@ function FS.wrap_buffer(_pull)
 	return h
 end
 
-FS.wrap_handle = {}
+FS.wrap_handle = setmetatable({}, { __call = function(self, typ, h)
+	local wh = self[typ](h)
+	setmetatable(wh, { __gc = function(self)
+		self.close()
+	end })
+	return wh
+end })
 function FS.wrap_handle.file(h)
 	local rh = {}
 	function rh.read(len)
