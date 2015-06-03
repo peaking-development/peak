@@ -61,9 +61,9 @@ return function(fs)
 				else
 					return ret(sync(function()
 						local h = wait(fs(path, 'open', xtend(opts, { type = 'file'; })))
-						wait(h.close())
 						local rh = {}
 						if opts.type == 'api' then
+							wait(h.close())
 							local api = apis[FS.serialize_path(path)]
 							if not api then
 								api = {
@@ -183,6 +183,28 @@ return function(fs)
 							function rh.close()
 								return Promise.resolved(true)
 							end
+						elseif opts.type == 'file' then
+							function rh.seek(whence, offset)
+								if whence == 'set' and offset <= 0 then
+									offset = 1
+								end
+								return ret(sync(function()
+									local pos = wait(h.seek(whence, offset))
+									if pos <= 0 then
+										pos = wait(h.seek('set', 1))
+									end
+									return pos
+								end))
+							end
+							rh.seek('set', 0)
+							rh.read = h.read
+
+							if opts.write then
+								rh.write = h.write
+								rh.flush = h.flush
+							end
+
+							rh.close = h.close
 						else
 							error('unhandled type: ' .. tostring(opts.type))
 						end
