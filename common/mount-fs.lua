@@ -1,4 +1,5 @@
 local FS = require 'common/fs'
+local Path = require 'common/path'
 local E = require 'common/error'
 local lon = require 'common/lon'
 local util = require 'common/util'
@@ -59,11 +60,11 @@ return function()
 	end
 	local function find_valid_fs(path, perm, create)
 		-- print('----')
-		-- print(FS.serialize_path(path))
+		-- print(Path.serialize(path))
 		local fss = find_fss(path, create)
 		for _, mount in ipairs(fss) do
 			local fs, path = mount[1], mount[2]
-			print('trying', fs, FS.serialize_path(path))
+			print('trying', fs, Path.serialize(path))
 			local stat = wait(fs(path, 'stat'))
 			-- print(stat.exists, stat.type)
 			-- TODO: chack perms
@@ -119,7 +120,7 @@ return function()
 	function fs.mount(path, fs, rd_pr, cr_pr)
 		if type(rd_pr) ~= 'number' then rd_pr = 0 end
 		if type(cr_pr) ~= 'number' then cr_pr = 0 end
-		print('mounting', fs, FS.serialize_path(path))
+		print('mounting', fs, Path.serialize(path))
 		find(path).mounts[fs] = {insertion_order, rd_pr, cr_pr}
 		insertion_order = insertion_order + 1
 	end

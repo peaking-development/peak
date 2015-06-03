@@ -2,6 +2,7 @@ local Promise = require 'common/promise'
 local sync = require 'common/promise-sync'
 local wait = sync.wait
 local E = require 'common/error'
+local Path = require 'common/path'
 local xtend = require 'common/xtend'
 
 local FS; FS = {
@@ -26,7 +27,7 @@ setmetatable(FS, { __call = function(self, ...)
 	if fs_opts.open_stat == nil then fs_opts.open_stat = true end
 	if not fs then error 'no filesystem' end
 	local function rfs(path, op, ...)
-		-- print(FS.serialize_path(path), op)
+		-- print(Path.serialize(path), op)
 		local args = {...}
 		local function run()
 			return fs(path, op, table.unpack(args))
@@ -95,55 +96,6 @@ end
 
 function FS.validate_type(typ)
 	return true -- TODO: validate_type
-end
-
-function FS.serialize_path(path)
-	local out = {}
-	for i, v in ipairs(path) do
-		out[i] = v:gsub('\\', '\\\\'):gsub('/', '\\/')
-	end
-	return table.concat(out, '/')
-end
-
-local function unescape(str)
-	return str:gsub('\\\\', '\\'):gsub('\\/', '/')
-end
-
-function FS.unserialize_path(path)
-	local pat = '(\\*)/'
-	local out = {}
-	local pre, tmp
-	local last_index = 0
-	while not (pre and #pre % 2 == 0) do
-		pre = path:match(pat)
-		local index = path:find(pat)
-		last_index = index + #pre + 1
-		tmp = path:sub(0, index - 1)
-	end
-	-- print(last_index, tmp)
-	for pre in path:gmatch(pat) do
-		-- print('pre', #pre % 2, pre)
-		-- print('past', path:sub(0, last_index))
-		local index = path:find(pat, last_index + 1)
-		if #pre % 2 == 0 then
-			-- print('adding\\\\', ('\\'):rep(#pre / 2))
-			tmp = tmp .. ('\\'):rep(#pre / 2)
-			-- print('splitting', tmp, last_index)
-			out[#out + 1] = tmp
-			tmp = ''
-		else
-			tmp = tmp .. ('\\'):rep((#pre - 1) / 2) .. '/'
-			-- print('adding\\', pre .. '/', tmp)
-		end
-		-- print('sub', last_index, index, index and path:sub(last_index, index - 1) or path:sub(last_index))
-		-- print('adding', (index and path:sub(last_index + 1, index - 1) or path:sub(last_index + 1)), tmp)
-		tmp = tmp .. unescape(index and path:sub(last_index + 1, index - 1) or path:sub(last_index + 1))
-		if index then
-			last_index = index + #pre
-		end
-	end
-	out[#out + 1] = tmp
-	return out
 end
 
 function FS.wrap_stream(_pull)

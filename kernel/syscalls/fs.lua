@@ -52,7 +52,7 @@ local syscalls = {
 
 	mount = function(proc, mnt_path, api_path, rd_pr, cr_pr)
 		-- TODO: check if it's an api
-		print('mounting', FS.serialize_path(mnt_path), FS.serialize_path(api_path))
+		print('mounting', Path.serialize(mnt_path), Path.serialize(api_path))
 		peak.fs.mount(expand_path(proc, mnt_path), API_FS(peak.fs, expand_path(proc, api_path)), rd_pr, cr_pr)
 		return Promise.resolved(true)
 	end;

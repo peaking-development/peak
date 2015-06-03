@@ -3,6 +3,7 @@ local util = require 'common/util'
 local sync = require 'common/promise-sync'
 local wait = sync.wait
 local FS = require 'common/fs'
+local Pat = require 'common/path'
 
 return {
 	fork = function(proc, fn, env)
@@ -23,7 +24,7 @@ return {
 				execute = true;
 			}))
 			local code = wait(h.read(math.huge))
-			local fn, err = load(code, FS.serialize_path(path), 't', _G)
+			local fn, err = load(code, Path.serialize(path), 't', _G)
 			if not fn then
 				error(err)
 			end

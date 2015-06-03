@@ -1,5 +1,6 @@
 -- REF: Monster Munch
 local FS = require 'common/fs'
+local Path = require 'common/path'
 local Promise = require 'common/promise'
 local xtend = require 'common/xtend'
 local sync = require 'common/promise-sync'
@@ -64,14 +65,14 @@ return function(fs)
 						local rh = {}
 						if opts.type == 'api' then
 							wait(h.close())
-							local api = apis[FS.serialize_path(path)]
+							local api = apis[Path.serialize(path)]
 							if not api then
 								api = {
 									methods = {};
 									queue = {};
 									resolves = {};
 								}
-								apis[FS.serialize_path(path)] = api
+								apis[Path.serialize(path)] = api
 							end
 							local proc = {}
 							local provided = {}
