@@ -55,4 +55,26 @@ function util.kvs(tbl)
 	return res
 end
 
+function util.keys(tbl)
+	local res = {}
+	for k in pairs(tbl) do
+		res[#res + 1] = k
+	end
+	return res
+end
+
+function util.has_any(tbl)
+	for k, v in pairs(tbl) do
+		return true
+	end
+	return false
+end
+
+function util.empty(tbl)
+	for k, v in pairs(tbl) do
+		return false
+	end
+	return true
+end
+
 return util
