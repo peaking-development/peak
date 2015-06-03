@@ -290,7 +290,7 @@ function FS.wrap_handle.file(h)
 			offset = whence
 			whence = 'cur'
 		end
-		if offset == nil then
+		if type(offset) ~= 'number' then
 			offset = 0
 		end
 		return h.seek(whence, offset)
@@ -335,6 +335,7 @@ function FS.wrap_handle.folder(h)
 end
 
 function FS.wrap_handle.api(h)
+	-- TODO: implement
 	return h
 end
 
