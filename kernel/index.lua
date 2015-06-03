@@ -96,7 +96,7 @@ function peak.boot()
 			end
 
 			-- play with fuse
-			if true then
+			if false then
 				local fd = wait(K.open({'test-fs-api'}, {
 					type = 'api';
 					create = true;
@@ -118,7 +118,20 @@ function peak.boot()
 				end
 				p(wait(stat))
 			end
-		end
+
+			-- fork, exec and env vars
+			if false then
+				wait(K.setenv('heyo', 'fizbuz'))
+				local pid = wait(K.fork(function()
+					print(wait(K.getenv('heyo')))
+					print(table.concat(wait(K.listenv()), ', '))
+					print('forked')
+					wait(K.exec({'test-exec'}, {'arg'}))
+				end))
+				print('pid', pid)
+				wait(K.wait_exit(pid))
+			end
+		end;
 	}
 end
 
