@@ -1,5 +1,4 @@
 watching files - maybe just a better way to implement polling (see select(2) and poll(2))
-fs handles __gc to close
 better error handling (so the kernel doesn't crash)
 setuid
 users & groups (perm fs)
