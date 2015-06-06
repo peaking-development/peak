@@ -43,8 +43,13 @@ local function parser(get_chunk)
 			return not done
 		end
 	end
-	local function read(len)
-		if type(len) == 'number' then
+	local function read(len, ...)
+		if len == 'all' or len == math.huge then
+			expand_buffer(math.huge)
+			local res = buffer
+			buffer = ''
+			return res
+		elseif type(len) == 'number' then
 			if not expand_buffer(len) then error('Not enough data for: ' .. len) end
 			local ret = buffer:sub(1, len)
 			buffer = buffer:sub(len + 1)
@@ -59,11 +64,8 @@ local function parser(get_chunk)
 			buffer = buffer:sub(#n + 2)
 			n = tonumber(n)
 			return n
-		elseif len == 'all' then
-			expand_buffer(math.huge)
-			return buffer
 		elseif len == 'sub' then
-			local len = read('num')
+			local len = (...) or read('num')
 			local left = len
 			return parser(function(len)
 				len = len or math.huge
@@ -81,10 +83,10 @@ local function parser(get_chunk)
 		done = function()
 			return #buffer == 0 and (done or not expand_buffer())
 		end;
-	}, { __call = function(self, len) return read(len) end; })
+	}, { __call = function(self, ...) return read(...) end; })
 end
 
 return setmetatable({
 	var = var;
 	num = num;
-}, { __call = function(self, get_chunk) return parser(get_chunk) end; })
+}, { __call = function(self, ...) return parser(...) end; })
