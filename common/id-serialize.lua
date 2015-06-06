@@ -98,8 +98,6 @@ return function(read_only)
 					local v = read_ref(tbl_read)
 					tbl[k] = v
 				end
-			else
-				print('skipping reading', id)
 			end
 		end
 		return res
