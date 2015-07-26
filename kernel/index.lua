@@ -95,6 +95,57 @@ function peak.boot()
 				wait(K.close(fd))
 			end
 
+			-- apis with processes
+			if true then
+				local fd = wait(K.open({'test-api'}, {
+					type = 'api';
+					create = true;
+					provide = true;
+					execute = true;
+				}))
+				wait(K.provide(fd, 'ready'))
+				wait(K.fork(function()
+					local fd = wait(K.open({'test-api'}, {
+						type = 'api';
+						create = true;
+						provide = true;
+						execute = true;
+					}))
+					wait(K.provide(fd, 'hello world'))
+					wait(K.provide(fd, 'fizbuz'))
+					wait(K.provide(fd, 'close'))
+					wait(K.call(fd, 'ready'))
+					while true do
+						local req = table.pack(wait(K.read(fd)))
+						local id, name, req = req[1], req[2], table.pack(table.unpack(req, 2, req.n))
+						if name == 'hello world' then
+							print('Hello World')
+							wait(K.respond(fd, id, true))
+						elseif name == 'fizbuz' then
+							print('fizbuz')
+							wait(K.respond(fd, id, true))
+						elseif name == 'close' then
+							wait(K.respond(fd, id, true))
+							wait(K.close(fd))
+							break
+						else
+							wait(K.respond(fd, id, false, 'unknown: ' .. name))
+						end
+					end
+				end))
+				local req = table.pack(wait(K.read(fd)))
+				local id, name, req = req[1], req[2], table.pack(table.unpack(req, 2, req.n))
+				if name == 'ready' then
+					wait(K.respond(fd, id, true))
+					wait(K.call(fd, 'hello world'))
+					wait(K.call(fd, 'fizbuz'))
+					wait(K.call(fd, 'close'))
+					wait(K.close(fd))
+				else
+					wait(K.respond(fd, id, false, 'unknown: ' .. name))
+				end
+			end
+
 			-- play with fuse
 			if false then
 				local fd = wait(K.open({'test-fs-api'}, {

@@ -158,6 +158,14 @@ return function(fs)
 									end
 									local promise, resolve = Promise.pending()
 									local function run(...)
+										for name in pairs(provided) do
+											local waiting = api.methods[name].waiting
+											for i, r_ in ipairs(waiting) do
+												if r_ == run then
+													table.remove(waiting, i)
+												end
+											end
+										end
 										resolve(true, ...)
 									end
 									waits[#waits + 1] = run
