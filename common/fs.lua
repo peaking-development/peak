@@ -52,6 +52,8 @@ setmetatable(FS, { __call = function(self, ...)
 						if real_opts.type == 'file' then
 							if opts.write then real_opts.write = true end
 							if opts.clear then real_opts.clear = true end
+						elseif real_opts.type == 'stream' then
+							if opts.write then real_opts.write = true end
 						elseif real_opts.type == 'api' then
 							if opts.execute then real_opts.execute = true end
 							if opts.provide then real_opts.provide = true end
@@ -293,6 +295,11 @@ function FS.wrap_handle.folder(h)
 end
 
 function FS.wrap_handle.api(h)
+	-- TODO: implement
+	return h
+end
+
+function FS.wrap_handle.stream(h)
 	-- TODO: implement
 	return h
 end

@@ -96,7 +96,7 @@ function peak.boot()
 			end
 
 			-- apis with processes
-			if true then
+			if false then
 				local fd = wait(K.open({'test-api'}, {
 					type = 'api';
 					create = true;
@@ -181,6 +181,19 @@ function peak.boot()
 				end))
 				print('pid', pid)
 				wait(K.wait_exit(pid))
+			end
+
+			-- play with streams
+			if false then
+				local fd = wait(K.open({'test-stream'}, {
+					type = 'stream';
+					create = true;
+					write = true;
+				}))
+				local write = K.write(fd, 'hello')
+				p(wait(K.read(fd)))
+				wait(write)
+				wait(K.close(fd))
 			end
 		end;
 	}

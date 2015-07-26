@@ -4,6 +4,7 @@ local Path = require 'common/path'
 local Promise = require 'common/promise'
 local xtend = require 'common/xtend'
 local sync = require 'common/promise-sync'
+local Serializer = require 'common/id-serialize'
 local wait = sync.wait
 
 local type_map = {
@@ -11,6 +12,7 @@ local type_map = {
 	file = 'F';
 	user = 'U';
 	group = 'G';
+	stream = 'S';
 }
 do
 	local t = type_map
@@ -22,6 +24,7 @@ end
 
 return function(fs)
 	local apis = {}
+	local streams = {}
 
 	return FS(function(path, op, ...)
 		return (({
@@ -214,6 +217,50 @@ return function(fs)
 							end
 
 							rh.close = h.close
+						elseif opts.type == 'stream' then
+							local stream = streams[Path.serialize(path)]
+							if not stream then
+								stream = {
+									queue = {};
+									waiting = {};
+								}
+								streams[Path.serialize(path)] = stream
+							end
+
+							local function unser(v)
+								local v = Serializer().un(v)
+								return table.unpack(v, 1, v.n)
+							end
+
+							function rh.read()
+								if #stream.queue > 0 then
+									local v, resolve = table.unpack(table.remove(stream.queue, 1))
+									resolve(true)
+									return Promise.resolved(true, unser(v))
+								else
+									local prom, resolve = Promise.pending()
+									stream.waiting[#stream.waiting + 1] = resolve
+									return prom
+								end
+							end
+
+							if opts.write then
+								function rh.write(...)
+									local prom, resolve = Promise.pending()
+									local v = Serializer().to(table.pack(...))
+									if #stream.waiting > 0 then
+										table.remove(stream.waiting, 1)(true, unser(v))
+										resolve(true)
+									else
+										stream.queue[#stream.queue + 1] = {v, resolve}
+									end
+									return prom
+								end
+							end
+
+							function rh.close()
+								return Promise.resolved(true)
+							end
 						else
 							error('unhandled type: ' .. tostring(opts.type))
 						end
