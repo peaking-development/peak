@@ -92,10 +92,6 @@ setmetatable(FS, { __call = function(self, ...)
 	return setmetatable({}, { __call = function(self, ...) return rfs(...) end })
 end })
 
-function FS.validate_mode(mode)
-	return true -- TODO: validate_type
-end
-
 function FS.validate_type(typ)
 	return true -- TODO: validate_type
 end
