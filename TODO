@@ -5,6 +5,7 @@ setuid
 users & groups (perm fs)
 validation of parameters to syscalls
 oc signal fs
+make type-mux-demux-fs apis and streams not store their data based on their path
 
 #- Userspace
 devbus

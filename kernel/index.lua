@@ -195,6 +195,17 @@ function peak.boot()
 				wait(write)
 				wait(K.close(fd))
 			end
+
+			-- oc signal bus
+			if true then
+				local fd = wait(K.open({'oc-signal-bus'}, {
+					type = 'stream';
+				}))
+				for i = 1, 10 do
+					p(wait(K.read(fd)))
+				end
+				wait(K.close(fd))
+			end
 		end;
 	}
 end

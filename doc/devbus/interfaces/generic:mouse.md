@@ -1,0 +1,5 @@
+event interaction_begin(id, x, y)
+event interaction_end(id)
+event interation_move(id, x, y)
+event interaction_up(id, btn)
+event interaction_down(id, btn)

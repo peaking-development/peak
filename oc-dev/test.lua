@@ -52,16 +52,17 @@ end
 
 dofile 'dev/reload.lua'
 
-local driver = dofile(fs.concat(shell.getWorkingDirectory(), 'kernel/oc-driver.lua'))({
+local driver = dofile(fs.concat(shell.getWorkingDirectory(), 'oc/driver.lua'))({
 	root = shell.getWorkingDirectory();
 })
 
-local peak_fs
-peak_fs = require('oc/openos-fs')(fs)
-peak_fs = require('common/subfs')(peak_fs, {'peak-fs'})
--- peak_fs = require('enhancment-fs')(peak_fs)
+driver.kernel.fs.mount({}, require 'common/type-mux-demux-fs' (require 'common/subfs' (require 'oc/openos-fs' (require 'filesystem'), {'peak-fs'})))
+driver.kernel.fs.mount({'oc-component-bus'}, require 'oc/component-fs' (component))
+local signals = require 'common/provide-stream-fs' ()
+driver.kernel.fs.mount({'oc-signal-bus'}, signals)
 
 function driver.event_handler(e, ...)
+	signals.send(table.pack(e, ...))
 	-- print('handle', e, serialization.serialize({...}))
 end
 driver.run()
