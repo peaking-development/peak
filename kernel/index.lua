@@ -53,6 +53,8 @@ function peak.boot()
 					execute = true;
 				}))
 				wait(K.call(fd, 'bind', '8668c677-17d3-442c-8d68-c789d3f309c9'))
+				local w, h = wait(K.call(fd, 'getResolution'))
+				wait(K.call(fd, 'fill', 1, 1, w, h, ' '))
 				wait(K.call(fd, 'set', 1, 2, 'heyo'))
 				wait(K.close(fd))
 			end
@@ -197,7 +199,7 @@ function peak.boot()
 			end
 
 			-- oc signal bus
-			if true then
+			if false then
 				local fd = wait(K.open({'oc-signal-bus'}, {
 					type = 'stream';
 				}))

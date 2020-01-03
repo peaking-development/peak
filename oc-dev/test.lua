@@ -1,6 +1,7 @@
 local fs = require 'filesystem'
 local shell = require 'shell'
 local serialization = require 'serialization'
+local component = require 'component'
 local io = require 'io'
 function _G.p(...)
 	print(serialization.serialize({...}))

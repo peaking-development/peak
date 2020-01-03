@@ -20,7 +20,7 @@ end
 
 local function try_collect(proc)
 	if proc.status ~= 'finished' then return end
-	if not proc.waited_on and not (proc.parent and proc.parent.status == 'finished') then
+	if not (proc.waited_on or (proc.parent and proc.parent.status == 'finished')) then
 		return
 	end
 	for child in pairs(proc.children) do

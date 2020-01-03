@@ -3,7 +3,7 @@ local util = require 'common/util'
 local sync = require 'common/promise-sync'
 local wait = sync.wait
 local FS = require 'common/fs'
-local Pat = require 'common/path'
+local Path = require 'common/path'
 
 return {
 	fork = function(proc, fn, env)
